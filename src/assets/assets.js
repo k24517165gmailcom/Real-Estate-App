@@ -1,4 +1,5 @@
 import logo from './logo.svg'
+import brandLogo from "./brandLogo.png"
 import logo_dark from './logo_dark.svg'
 import cross_icon from './cross_icon.svg'
 import menu_icon from './menu_icon.svg'
@@ -6,7 +7,8 @@ import star_icon from './star_icon.svg'
 import left_arrow from './left_arrow.svg'
 import right_arrow from './right_arrow.svg'
 
-import brand_img from './brand_img.png'
+//import brand_img from './brand_img.png'
+import brand_img from './aboutImage.png'
 import project_img_1 from './project_img_1.jpg'
 import project_img_2 from './project_img_2.jpg'
 import project_img_3 from './project_img_3.jpg'
@@ -18,6 +20,7 @@ import profile_img_2 from './profile_img_2.png'
 import profile_img_3 from './profile_img_3.png'
 
 export const assets = {
+  brandLogo,
   logo,
   logo_dark,
   cross_icon,
@@ -75,27 +78,30 @@ export const projectsData = [
 
 export const testimonialsData = [
   {
-    name: "Donald Jackman",
-    title: "Marketing Manager",
+    name: "Ananya Mehta",
+    title: "Marketing Manager, BrightLeaf Media",
     image: profile_img_1,
-    alt: "Portrait of Donald Jackman",
+    alt: "Portrait of Ananya Mehta",
     rating: 5,
-    text: "From the very first meeting, they understood my vision and helped me find the perfect property. Their attention to detail and commitment to client satisfaction is unmatched."
+    text: "Vayuhu has transformed how our team works. The vibrant environment and modern amenities make collaboration effortless and enjoyable every day.",
   },
   {
-    name: "Richard Nelson",
-    title: "UI/UX Designer",
+    name: "Rohit Sharma",
+    title: "UI/UX Designer, Freelance",
     image: profile_img_2,
-    alt: "Portrait of Richard Nelson",
-    rating: 4,
-    text: "From the very first meeting, they understood my vision and helped me find the perfect property. Their attention to detail and commitment to client satisfaction is unmatched."
+    alt: "Portrait of Rohit Sharma",
+    rating: 5,
+    text: "The creative vibe at Vayuhu helps me stay focused and inspired. It’s more than a workspace — it’s a community where designers, developers, and creators connect.",
   },
   {
-    name: "James Washington",
-    title: "Co-Founder",
+    name: "Priya Nair",
+    title: "Co-Founder, Innovent Labs",
     image: profile_img_3,
-    alt: "Portrait of James Washington",
+    alt: "Portrait of Priya Nair",
     rating: 5,
-    text: "From the very first meeting, they understood my vision and helped me find the perfect property. Their attention to detail and commitment to client satisfaction is unmatched."
-  }
+    text: "Starting our startup at Vayuhu was the best decision we made. The energy, networking, and support from the team made our early journey much smoother.",
+  },
 ];
+
+
+
