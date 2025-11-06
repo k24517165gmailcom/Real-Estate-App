@@ -1,12 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const WorkspacePricing = () => {
     const location = useLocation();
     const selectedPlan = location.state?.plan;
 
-    const [modalData, setModalData] = useState(null); // stores workspace clicked
+    const [modalData, setModalData] = useState(null);
+    const [step, setStep] = useState(1);
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [termsAccepted, setTermsAccepted] = useState(false);
+    const [coupon, setCoupon] = useState("");
+    const [discount, setDiscount] = useState(0);
+    const [referral, setReferral] = useState("");
+    const [days, setDays] = useState(0);
 
     const workspaces = [
         {
@@ -83,16 +93,61 @@ const WorkspacePricing = () => {
         }
     }, [selectedPlan]);
 
+    // Automatic end date logic
+    useEffect(() => {
+        if (!startDate || !modalData?.planType) return;
+
+        const start = new Date(startDate);
+        let end = new Date(start);
+
+        if (modalData.planType === "Monthly") {
+            end.setMonth(start.getMonth() + 1);
+        } else if (modalData.planType === "Daily") {
+            end.setDate(start.getDate() + 1);
+        } else if (modalData.planType === "Hourly") {
+            end.setHours(start.getHours() + 1);
+        }
+
+        setEndDate(end.toISOString().split("T")[0]);
+    }, [startDate, modalData?.planType]);
+
+    // Dynamic day calculation
+    useEffect(() => {
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+            setDays(diff > 0 ? diff : 0);
+        }
+    }, [startDate, endDate]);
+
+    // Apply coupon
+    const handleApplyCoupon = () => {
+        if (coupon.trim().toLowerCase() === "vayuhu10") {
+            setDiscount(10);
+            toast.success("Coupon applied! You got ₹10 off!");
+            setCoupon(""); // ✅ reset after use
+        } else {
+            toast.error("Invalid coupon code");
+            setCoupon(""); // ✅ reset invalid input
+        }
+    };
+
+
+    const calculateTotal = () => {
+        const base = modalData?.price || 0;
+        const gst = base * 0.18;
+        return base + gst - discount;
+    };
+
     return (
         <section id="WorkSpaces" className="container mx-auto px-6 md:px-20 lg:px-32 py-20">
+            <ToastContainer position="top-center" autoClose={2000} />
+
             {/* Header */}
             <div className="text-center mb-12">
-                <h6 className="uppercase text-orange-500 tracking-widest font-medium">
-                    Pricing
-                </h6>
-                <h2 className="text-3xl sm:text-5xl font-bold text-gray-800 mt-2">
-                    Workspace Plans
-                </h2>
+                <h6 className="uppercase text-orange-500 tracking-widest font-medium">Pricing</h6>
+                <h2 className="text-3xl sm:text-5xl font-bold text-gray-800 mt-2">Workspace Plans</h2>
                 <p className="text-gray-500 mt-4 max-w-2xl mx-auto">
                     Choose the workspace that fits your needs. Flexible pricing for hourly,
                     daily, or monthly use.
@@ -101,68 +156,50 @@ const WorkspacePricing = () => {
 
             {/* Workspace Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
-                {workspaces.map((item) => {
-                    const isSelected =
-                        selectedPlan && selectedPlan.replace(/\s+/g, "-") === item.id;
+                {workspaces.map((item) => (
+                    <motion.div
+                        key={item.id}
+                        id={item.id}
+                        whileHover={{ scale: 1.03 }}
+                        transition={{ type: "spring", stiffness: 200 }}
+                        className="relative rounded-2xl overflow-hidden shadow-lg border border-gray-200"
+                    >
+                        <img src={item.image} alt={item.title} className="w-full h-64 object-cover" />
+                        <div className="p-6 bg-white">
+                            <h3 className="text-xl font-semibold text-gray-800 mb-2">{item.title}</h3>
+                            <p className="text-gray-600 mb-2">{item.desc}</p>
+                            <p className="text-sm text-gray-500 mb-2">Type: {item.type}</p>
+                            <p className="text-sm text-gray-500 mb-2">
+                                Capacity: {item.capacity} person{item.capacity > 1 ? "s" : ""}
+                            </p>
 
-                    return (
-                        <motion.div
-                            key={item.id}
-                            id={item.id}
-                            whileHover={{ scale: 1.03 }}
-                            transition={{ type: "spring", stiffness: 200 }}
-                            className={`relative rounded-2xl overflow-hidden shadow-lg border ${isSelected
-                                ? "border-orange-500 shadow-[0_0_25px_rgba(255,165,0,0.5)]"
-                                : "border-gray-200"
-                                }`}
-                        >
-                            <img
-                                src={item.image}
-                                alt={item.title}
-                                className="w-full h-64 object-cover"
-                            />
-                            <div className="p-6 bg-white">
-                                <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                                    {item.title}
-                                </h3>
-                                <p className="text-gray-600 mb-2">{item.desc}</p>
-                                <p className="text-sm text-gray-500 mb-2">Type: {item.type}</p>
-                                <p className="text-sm text-gray-500 mb-2">
-                                    Capacity: {item.capacity} person{item.capacity > 1 ? "s" : ""}
-                                </p>
-
-                                {/* Pricing buttons */}
-                                {item.monthly && (
-                                    <button
-                                        onClick={() => setModalData({ ...item, planType: "Monthly", price: item.monthly })}
-                                        className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium mr-2 mb-2 hover:bg-orange-600 transition"
-                                    >
-                                        Monthly ₹{item.monthly}
-                                    </button>
-                                )}
-                                {item.daily && (
-                                    <button
-                                        onClick={() => setModalData({ ...item, planType: "Daily", price: item.daily })}
-                                        className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium mr-2 mb-2 hover:bg-orange-600 transition"
-                                    >
-                                        Daily ₹{item.daily}
-                                    </button>
-                                )}
-                                {item.hourly && (
-                                    <button
-                                        onClick={() => setModalData({ ...item, planType: "Hourly", price: item.hourly })}
-                                        className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium mb-2 hover:bg-orange-600 transition"
-                                    >
-                                        Hourly ₹{item.hourly}
-                                    </button>
-                                )}
-                            </div>
-                        </motion.div>
-                    );
-                })}
+                            {/* Pricing Buttons */}
+                            {["monthly", "daily", "hourly"].map(
+                                (type) =>
+                                    item[type] && (
+                                        <button
+                                            key={type}
+                                            onClick={() => {
+                                                setModalData({
+                                                    ...item,
+                                                    planType: type.charAt(0).toUpperCase() + type.slice(1),
+                                                    price: item[type],
+                                                });
+                                                setStartDate(new Date().toISOString().split("T")[0]);
+                                                setStep(1);
+                                            }}
+                                            className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium mr-2 mb-2 hover:bg-orange-600 transition"
+                                        >
+                                            {type.charAt(0).toUpperCase() + type.slice(1)} ₹{item[type]}
+                                        </button>
+                                    )
+                            )}
+                        </div>
+                    </motion.div>
+                ))}
             </div>
 
-            {/* Booking Modal */}
+            {/* Modals */}
             <AnimatePresence>
                 {modalData && (
                     <motion.div
@@ -171,48 +208,223 @@ const WorkspacePricing = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                     >
-                        <motion.div
-                            className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl relative"
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            <button
-                                onClick={() => setModalData(null)}
-                                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-2xl"
+                        {/* Step 1 */}
+                        {step === 1 && (
+                            <motion.div
+                                className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl relative"
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
                             >
-                                ✕
-                            </button>
+                                <button
+                                    onClick={() => setModalData(null)}
+                                    className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-2xl"
+                                >
+                                    ✕
+                                </button>
+                                <h3 className="text-2xl font-semibold text-gray-800 mb-4">
+                                    {modalData.title} - {modalData.planType} Plan
+                                </h3>
+                                <p className="text-gray-600 mb-4">
+                                    Choose your required timings for the workspace plan &{" "}
+                                    {modalData.planType.toLowerCase()} pack
+                                </p>
 
-                            <h3 className="text-2xl font-semibold text-gray-800 mb-4">
-                                {modalData.title} - {modalData.planType} Plan
-                            </h3>
-                            <p className="text-gray-600 mb-4">
-                                Choose your required timings for the workspace plan & {modalData.planType.toLowerCase()} pack
-                            </p>
-
-                            {/* Start Date */}
-                            <label className="block text-gray-700 mb-2">Start Date:</label>
-                            <input
-                                type="date"
-                                defaultValue={new Date().toISOString().split("T")[0]}
-                                className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4"
-                            />
-
-                            {/* Terms & Conditions */}
-                            <label className="flex items-center mb-4">
+                                <label className="block text-gray-700 mb-2">Start Date:</label>
                                 <input
-                                    type="checkbox"
-                                    className="mr-2"
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4"
                                 />
-                                Accept Terms & Conditions
-                            </label>
 
-                            <button className="bg-orange-500 text-white w-full py-2 rounded-lg font-medium hover:bg-orange-600 transition">
-                                Next
-                            </button>
-                        </motion.div>
+                                <label className="flex items-center mb-4">
+                                    <input
+                                        type="checkbox"
+                                        className="mr-2"
+                                        checked={termsAccepted}
+                                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                                    />
+                                    Accept Terms & Conditions
+                                </label>
+
+                                <button
+                                    disabled={!termsAccepted}
+                                    onClick={() => setStep(2)}
+                                    className={`w-full py-2 rounded-lg font-medium transition ${termsAccepted
+                                        ? "bg-orange-500 text-white hover:bg-orange-600"
+                                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                        }`}
+                                >
+                                    Next »
+                                </button>
+                            </motion.div>
+                        )}
+
+                        {/* Step 2 */}
+                        {step === 2 && (
+                            <motion.div
+                                className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl relative"
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                            >
+                                <button
+                                    onClick={() => setModalData(null)}
+                                    className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-2xl"
+                                >
+                                    ✕
+                                </button>
+                                <h3 className="text-xl font-semibold text-gray-800 mb-2 text-center">
+                                    <span className="text-red-500 font-bold uppercase">CHOOSE YOUR END DATE</span>
+                                </h3>
+                                <p className="text-gray-600 text-center mb-6">
+                                    {modalData.title} & {modalData.planType} Pack from 08:00 AM to 08:00 PM
+                                </p>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                                    <div>
+                                        <label className="block text-gray-700 mb-2">Start Date:</label>
+                                        <input
+                                            type="date"
+                                            value={startDate}
+                                            readOnly
+                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 shadow-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 mb-2">End Date:</label>
+                                        <input
+                                            type="date"
+                                            value={endDate}
+                                            readOnly
+                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 shadow-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-between">
+                                    <button
+                                        onClick={() => setStep(1)}
+                                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                                    >
+                                        « Back
+                                    </button>
+                                    <button
+                                        onClick={() => setStep(3)}
+                                        className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                                    >
+                                        Next »
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* Step 3 */}
+                        {step === 3 && (
+                            <motion.div
+                                className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-xl relative overflow-y-auto max-h-[90vh]"
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                            >
+                                <button
+                                    onClick={() => setModalData(null)}
+                                    className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-2xl"
+                                >
+                                    ✕
+                                </button>
+                                <h3 className="text-xl font-semibold text-gray-800 mb-2 text-center">
+                                    <span className="text-red-500 font-bold uppercase">REVIEW DETAILS</span>
+                                </h3>
+                                <p className="text-gray-600 text-center mb-6">
+                                    Selected Dates: {startDate} – {endDate} ({days} days)
+                                </p>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                                    {/* Left column */}
+                                    <div>
+                                        <label>Plan</label>
+                                        <input value={modalData.title} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <label>No of Days</label>
+                                        <input value={days} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <label>Start Date</label>
+                                        <input value={startDate} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <label>Start Time</label>
+                                        <input value="08:00 AM" readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <label>Amount</label>
+                                        <input value={`₹${modalData.price}`} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <label>Total (with GST)</label>
+                                        <input value={`₹${calculateTotal()}`} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <label>Discount</label>
+                                        <input value={`₹${discount}`} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <label>Select Referral Source</label>
+                                        <select
+                                            value={referral}
+                                            onChange={(e) => setReferral(e.target.value)}
+                                            className="w-full border rounded-lg px-3 py-2 mb-3"
+                                        >
+                                            <option value="">Select</option>
+                                            <option>Instagram</option>
+                                            <option>Facebook</option>
+                                            <option>Google</option>
+                                            <option>Friend</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Right column */}
+                                    <div>
+                                        <label>Pack</label>
+                                        <input value={modalData.planType} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <label>End Date</label>
+                                        <input value={endDate} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <label>End Time</label>
+                                        <input value="08:00 PM" readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <label>GST (18%)</label>
+                                        <input value={`₹${modalData.price * 0.18}`} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <label>Apply Coupon</label>
+                                        <div className="flex mb-3">
+                                            <input
+                                                value={coupon}
+                                                onChange={(e) => setCoupon(e.target.value)}
+                                                placeholder="Enter code"
+                                                className="border rounded-l-lg px-3 py-2 w-full"
+                                            />
+                                            <button
+                                                onClick={handleApplyCoupon}
+                                                className="bg-orange-500 text-white px-4 py-2 rounded-r-lg hover:bg-orange-600"
+                                            >
+                                                Apply
+                                            </button>
+                                        </div>
+                                        <label>Final Total (including GST)</label>
+                                        <input
+                                            value={`₹${calculateTotal()}`}
+                                            readOnly
+                                            className="w-full border rounded-lg px-3 py-2 mb-3 font-semibold"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-between">
+                                    <button
+                                        onClick={() => setStep(2)}
+                                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                                    >
+                                        « Back
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            toast.success("Booking Confirmed! ✅");
+                                            setTimeout(() => setModalData(null), 1500);
+                                        }}
+                                        className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                                    >
+                                        Pay & Book »
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
