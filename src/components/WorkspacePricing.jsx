@@ -4,6 +4,41 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+// Helper function to generate time options in 24-hour format for state storage
+const generateTimeOptions = () => {
+    const times = [];
+    // Assuming working hours are 8:00 AM to 8:00 PM (12 hours)
+    for (let i = 8; i <= 20; i++) {
+        const hour = i % 12 === 0 ? 12 : i % 12;
+        const ampm = i < 12 || i === 24 ? "AM" : "PM";
+        const timeValue = `${i.toString().padStart(2, '0')}:00`; // 24-hour format: 08:00, 09:00, 16:00, etc.
+        const display = `${hour.toString().padStart(2, '0')}:00 ${ampm}`;
+        times.push({ value: timeValue, display: display });
+    }
+    return times;
+};
+
+const TIME_OPTIONS = generateTimeOptions();
+
+// NEW HELPER FUNCTION: Correctly formats 24-hour time to 12-hour AM/PM display
+const format24HourTo12Hour = (time24) => {
+    if (!time24) return '';
+    try {
+        const [hours24, minutes] = time24.split(':');
+        let hours = parseInt(hours24, 10);
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+
+        hours = hours % 12;
+        hours = hours ? hours : 12; // the hour '0' should be '12'
+
+        return `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+    } catch (error) {
+        console.error("Time formatting error:", error);
+        return time24; // Return original if error occurs
+    }
+}
+
+
 const WorkspacePricing = () => {
     const location = useLocation();
     const selectedPlan = location.state?.plan;
@@ -13,13 +48,17 @@ const WorkspacePricing = () => {
     const [step, setStep] = useState(1);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
+    const [startTime, setStartTime] = useState("");
+    const [endTime, setEndTime] = useState("");
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [coupon, setCoupon] = useState("");
     const [discount, setDiscount] = useState(0);
     const [referral, setReferral] = useState("");
     const [days, setDays] = useState(0);
+    const [totalHours, setTotalHours] = useState(1);
 
     const workspaces = [
+        // ... (Your workspace data remains the same)
         {
             id: "Individual-Working-Space",
             title: "Individual Working Space",
@@ -86,7 +125,7 @@ const WorkspacePricing = () => {
         },
     ];
 
-    // Scroll to selected workspace on page load
+    // Scroll to selected workspace on page load (remains the same)
     useEffect(() => {
         if (selectedPlan) {
             const element = document.getElementById(selectedPlan.replace(/\s+/g, "-"));
@@ -94,7 +133,7 @@ const WorkspacePricing = () => {
         }
     }, [selectedPlan]);
 
-    // Set default end date on start date change
+    // Set default end date on start date change (remains the same)
     useEffect(() => {
         if (!startDate || !modalData?.planType) return;
 
@@ -103,19 +142,17 @@ const WorkspacePricing = () => {
 
         if (modalData.planType === "Monthly") {
             end.setMonth(start.getMonth() + 1);
-            // Monthly plans often end one day *before* the next month's start date
             end.setDate(end.getDate() - 1);
         } else if (modalData.planType === "Daily" || modalData.planType === "Hourly") {
             end = new Date(start);
         }
 
-        // Only set the end date if it hasn't been manually set by the user yet
         if (!endDate || endDate === startDate) {
             setEndDate(end.toISOString().split("T")[0]);
         }
     }, [startDate, modalData?.planType]);
 
-    // Dynamic day calculation
+    // Dynamic day calculation (remains the same)
     useEffect(() => {
         if (startDate && endDate) {
             const start = new Date(startDate);
@@ -136,7 +173,25 @@ const WorkspacePricing = () => {
         }
     }, [startDate, endDate]);
 
-    // Apply coupon
+    // Calculate total hours for Hourly plan (remains the same)
+    useEffect(() => {
+        if (modalData?.planType === "Hourly" && startTime && endTime) {
+            const startHour = parseInt(startTime.split(':')[0]);
+            const endHour = parseInt(endTime.split(':')[0]);
+
+            let calculatedHours = endHour - startHour;
+
+            if (calculatedHours <= 0) {
+                setTotalHours(1);
+            } else {
+                setTotalHours(calculatedHours);
+            }
+        } else {
+            setTotalHours(1); // Default to 1 hour
+        }
+    }, [startTime, endTime, modalData?.planType]);
+
+    // Apply coupon (remains the same)
     const handleApplyCoupon = () => {
         if (coupon.trim().toLowerCase() === "vayuhu10") {
             setDiscount(10);
@@ -148,17 +203,15 @@ const WorkspacePricing = () => {
         }
     };
 
-    // Calculate the base amount depending on the plan type and duration
+    // Calculate the base amount depending on the plan type and duration (remains the same)
     const calculateBaseAmount = () => {
         const basePrice = modalData?.price || 0;
         if (modalData?.planType === "Daily") {
             return basePrice * days;
         } else if (modalData?.planType === "Monthly") {
-            // Monthly price is fixed, regardless of the days calculated (30/31 days)
             return basePrice;
         } else if (modalData?.planType === "Hourly") {
-            // For now, assume single session price.
-            return basePrice;
+            return basePrice * totalHours * days;
         }
         return 0;
     }
@@ -169,41 +222,40 @@ const WorkspacePricing = () => {
         return finalBaseAmount + gst - discount;
     };
 
-    // Helper to get day name for Step 3
+    // Helper functions (getDayName and resetState remain the same, but resetState now clears time states)
     const getDayName = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', { weekday: 'long' });
     }
 
-    // --- State Reset Function ---
     const resetState = () => {
         setModalData(null);
         setStep(1);
         setStartDate("");
         setEndDate("");
+        setStartTime("");
+        setEndTime("");
         setTermsAccepted(false);
         setCoupon("");
         setDiscount(0);
         setReferral("");
         setDays(0);
+        setTotalHours(1);
     };
 
-    // Get the base amount for display (before GST)
+    // Derived values for display
     const displayAmount = calculateBaseAmount();
-    // Get the GST amount
     const displayGst = (displayAmount * 0.18).toFixed(0);
-    // Get the total before discount
     const totalPreDiscount = (displayAmount + parseFloat(displayGst)).toFixed(0);
-    // Get the final price
     const finalTotal = calculateTotal().toFixed(0);
 
 
     return (
         <section id="WorkSpaces" className="container mx-auto px-6 md:px-20 lg:px-32 py-20">
             <ToastContainer position="top-center" autoClose={2000} />
+            {/* ... (Header and Workspace Cards JSX remain the same) ... */}
 
-            {/* Header */}
             <div className="text-center mb-12">
                 <h6 className="uppercase text-orange-500 tracking-widest font-medium">Pricing</h6>
                 <h2 className="text-3xl sm:text-5xl font-bold text-gray-800 mt-2">Workspace Plans</h2>
@@ -213,7 +265,6 @@ const WorkspacePricing = () => {
                 </p>
             </div>
 
-            {/* Workspace Cards (JSX remains the same) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
                 {workspaces.map((item) => (
                     <motion.div
@@ -247,6 +298,9 @@ const WorkspacePricing = () => {
                                                 setStartDate(new Date().toISOString().split("T")[0]);
                                                 setEndDate("");
                                                 setStep(1);
+                                                // Default to a 1-hour booking (4pm to 5pm, or start/end of day for monthly/daily)
+                                                setStartTime(type === "hourly" ? "16:00" : "08:00");
+                                                setEndTime(type === "hourly" ? "17:00" : "20:00");
                                             }}
                                             className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium mr-2 mb-2 hover:bg-orange-600 transition"
                                         >
@@ -259,7 +313,7 @@ const WorkspacePricing = () => {
                 ))}
             </div>
 
-            {/* Modals (Steps 1 & 2 JSX remain the same) */}
+
             <AnimatePresence>
                 {modalData && (
                     <motion.div
@@ -268,7 +322,7 @@ const WorkspacePricing = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                     >
-                        {/* Step 1: Start Date */}
+                        {/* Step 1: Start Date & Time */}
                         {step === 1 && (
                             <motion.div
                                 className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl relative"
@@ -298,6 +352,42 @@ const WorkspacePricing = () => {
                                     className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4"
                                 />
 
+                                {/* Time Selection (only for Hourly plans) */}
+                                {modalData.planType === "Hourly" && (
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-gray-700 mb-2">Start Time:</label>
+                                            <select
+                                                value={startTime}
+                                                onChange={(e) => setStartTime(e.target.value)}
+                                                className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                                            >
+                                                <option value="" disabled>Select Start Time</option>
+                                                {TIME_OPTIONS.slice(0, -1).map(t => (
+                                                    <option key={t.value} value={t.value}>{t.display}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-gray-700 mb-2">End Time:</label>
+                                            <select
+                                                value={endTime}
+                                                onChange={(e) => setEndTime(e.target.value)}
+                                                className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                                                disabled={!startTime}
+                                            >
+                                                <option value="" disabled>Select End Time</option>
+                                                {TIME_OPTIONS.slice(1).map(t => (
+                                                    t.value > startTime && (
+                                                        <option key={t.value} value={t.value}>{t.display}</option>
+                                                    )
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                )}
+
+
                                 <label className="flex items-center mb-4">
                                     <input
                                         type="checkbox"
@@ -309,11 +399,12 @@ const WorkspacePricing = () => {
                                 </label>
 
                                 <button
-                                    disabled={!termsAccepted || !startDate}
+                                    disabled={!termsAccepted || !startDate ||
+                                        (modalData.planType === "Hourly" && (!startTime || !endTime || totalHours <= 0))}
                                     onClick={() => setStep(2)}
-                                    className={`w-full py-2 rounded-lg font-medium transition ${termsAccepted && startDate
-                                            ? "bg-orange-500 text-white hover:bg-orange-600"
-                                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    className={`w-full py-2 rounded-lg font-medium transition ${termsAccepted && startDate && totalHours > 0
+                                        ? "bg-orange-500 text-white hover:bg-orange-600"
+                                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
                                         }`}
                                 >
                                     Next »
@@ -321,7 +412,7 @@ const WorkspacePricing = () => {
                             </motion.div>
                         )}
 
-                        {/* Step 2: End Date (Editable) */}
+                        {/* Step 2: End Date for Recurrence */}
                         {step === 2 && (
                             <motion.div
                                 className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl relative"
@@ -339,7 +430,9 @@ const WorkspacePricing = () => {
                                     <span className="text-red-500 font-bold uppercase">CHOOSE YOUR END DATE FOR RECURSION</span>
                                 </h3>
                                 <p className="text-gray-600 text-center mb-6">
-                                    {modalData.title} & {modalData.planType} Pack from 08:00 AM to 08:00 PM
+                                    {modalData.title} & {modalData.planType} Pack
+                                    {modalData.planType === "Hourly" && startTime && endTime && ` from ${format24HourTo12Hour(startTime)} to ${format24HourTo12Hour(endTime)}`}
+                                    {modalData.planType !== "Hourly" && ` from 08:00 AM to 08:00 PM`}
                                 </p>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -375,8 +468,8 @@ const WorkspacePricing = () => {
                                         disabled={!endDate || new Date(endDate) < new Date(startDate)}
                                         onClick={() => setStep(3)}
                                         className={`px-4 py-2 rounded-lg font-medium transition ${endDate && new Date(endDate) >= new Date(startDate)
-                                                ? "bg-orange-500 text-white hover:bg-orange-600"
-                                                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                            ? "bg-orange-500 text-white hover:bg-orange-600"
+                                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
                                             }`}
                                     >
                                         Next »
@@ -385,7 +478,7 @@ const WorkspacePricing = () => {
                             </motion.div>
                         )}
 
-                        {/* Step 3: Review Details and Payment (Monthly Conditional Logic Applied) */}
+                        {/* Step 3: Review Details and Payment */}
                         {step === 3 && (
                             <motion.div
                                 className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-xl relative overflow-y-auto max-h-[90vh]"
@@ -404,6 +497,7 @@ const WorkspacePricing = () => {
                                 </h3>
                                 <p className="text-gray-600 text-center mb-6">
                                     Selected Dates: {startDate} – {endDate} ({days} days)
+                                    {modalData.planType === "Hourly" && ` (${totalHours} hours/day)`}
                                 </p>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -412,7 +506,6 @@ const WorkspacePricing = () => {
                                         <label className="block text-gray-700 mb-1">Plan</label>
                                         <input value={modalData.title} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
 
-                                        {/* CONDITIONAL FIELD: Show "Day of Week" for Daily, just "Days" for Monthly/Other */}
                                         <label className="block text-gray-700 mb-1">
                                             {modalData.planType === "Monthly" ? "Days Included" : "No of Days"}
                                         </label>
@@ -424,8 +517,14 @@ const WorkspacePricing = () => {
 
                                         <label className="block text-gray-700 mb-1">Start Date</label>
                                         <input value={startDate} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+
                                         <label className="block text-gray-700 mb-1">Start Time</label>
-                                        <input value="08:00 AM" readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <input
+                                            // FIX APPLIED HERE
+                                            value={modalData.planType === "Hourly" ? format24HourTo12Hour(startTime) : "08:00 AM"}
+                                            readOnly
+                                            className="w-full border rounded-lg px-3 py-2 mb-3"
+                                        />
 
                                         <label className="block text-gray-700 mb-1">Amount</label>
                                         <input value={`₹${displayAmount.toFixed(0)}`} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
@@ -452,15 +551,14 @@ const WorkspacePricing = () => {
 
                                     {/* Right column */}
                                     <div>
-                                        {/* CONDITIONAL FIELD: Show Day of Week only for Daily plan */}
-                                        {modalData.planType !== "Monthly" && (
+                                        {/* CONDITIONAL FIELD: Day of Week/Placeholder */}
+                                        {(modalData.planType !== "Monthly" && days === 1) && (
                                             <>
                                                 <label className="block text-gray-700 mb-1">Day of Week</label>
                                                 <input value={getDayName(startDate)} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
                                             </>
                                         )}
-                                        {/* Placeholder for monthly day of week spacing */}
-                                        {modalData.planType === "Monthly" && (
+                                        {(modalData.planType === "Monthly" || days > 1) && (
                                             <>
                                                 <label className="block text-gray-700 mb-1"> </label>
                                                 <input value={""} readOnly className="w-full border rounded-lg px-3 py-2 mb-3 border-white bg-transparent" />
@@ -474,7 +572,12 @@ const WorkspacePricing = () => {
                                         <input value={endDate} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
 
                                         <label className="block text-gray-700 mb-1">End Time</label>
-                                        <input value="08:00 PM" readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <input
+                                            // FIX APPLIED HERE
+                                            value={modalData.planType === "Hourly" ? format24HourTo12Hour(endTime) : "08:00 PM"}
+                                            readOnly
+                                            className="w-full border rounded-lg px-3 py-2 mb-3"
+                                        />
 
                                         <label className="block text-gray-700 mb-1">GST (18%)</label>
                                         <input value={`₹${displayGst}`} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
