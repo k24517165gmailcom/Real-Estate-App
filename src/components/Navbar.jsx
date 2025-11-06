@@ -1,118 +1,115 @@
-import React, { useEffect, useState } from 'react'
-import { assets } from '../assets/assets'
+import React, { useEffect, useState } from "react";
+import { assets } from "../assets/assets";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Navbar = () => {
-    const [showMobileMenu, setShowMobileMenu] = useState(false)
-    const [isScrolled, setIsScrolled] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-    useEffect(() => {
-        // Disable body scroll when mobile menu is open
-        document.body.style.overflow = showMobileMenu ? 'hidden' : 'auto'
-        return () => {
-            document.body.style.overflow = 'auto'
-        }
-    }, [showMobileMenu])
+  // Disable body scroll when mobile menu is open
+  useEffect(() => {
+    document.body.style.overflow = showMobileMenu ? "hidden" : "auto";
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [showMobileMenu]);
 
-    useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 50)
-        }
-        window.addEventListener('scroll', handleScroll)
-        return () => window.removeEventListener('scroll', handleScroll)
-    }, [])
+  // Change background when scrolled
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
-    return (
-        <div
-            className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-black/80 backdrop-blur-md shadow-md' : 'bg-transparent'
-                }`}
-        >
-            <div className='container mx-auto flex justify-between items-center py-4 px-6 md:px-20 lg:px-32'>
-                {/* Brand Name 
-                <h1 className='text-3xl font-extrabold text-white tracking-wider'>
-                    <span className='text-orange-400'>V</span>ayuhu
-                </h1>*/}
-                <img
-                    src={assets.brandLogo}
-                    alt="Vayuhu Logo"
-                    className="w-32 h-auto md:w-40 object-contain"
-                />
+  // Smooth navigation handler
+  const handleNavClick = (hash) => {
+    setShowMobileMenu(false); // Close mobile menu after navigation
+    if (location.pathname !== "/") {
+      navigate("/");
+      setTimeout(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+      }, 500);
+    } else {
+      document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
+  return (
+    <>
+      {/* Navbar Bar */}
+      <div
+        className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${isScrolled ? "bg-black/80 backdrop-blur-md shadow-md" : "bg-transparent"
+          }`}
+      >
+        <div className="container mx-auto flex justify-between items-center py-3 px-4 sm:px-8 md:px-16 lg:px-24">
+          {/* Logo */}
+          <img
+            src={assets.brandLogo}
+            alt="Vayuhu Logo"
+            className="w-28 sm:w-32 md:w-36 lg:w-40 cursor-pointer"
+            onClick={() => {
+              if (location.pathname !== "/") {
+                navigate("/");
+                setTimeout(() => {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }, 500);
+              } else {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+          />
 
-                {/* Desktop Menu */}
-                <ul className='hidden md:flex gap-7 text-white'>
-                    <a href='#Header' className='cursor-pointer hover:text-gray-400'>
-                        Home
-                    </a>
-                    <a href='#About' className='cursor-pointer hover:text-gray-400'>
-                        About
-                    </a>
-                    <a href='#WorkSpaces' className='cursor-pointer hover:text-gray-400'>
-                        WorkSpaces
-                    </a>
-                    <a href='#Testimonials' className='cursor-pointer hover:text-gray-400'>
-                        Testimonials
-                    </a>
-                </ul>
+          {/* Desktop Menu */}
+          <ul className="hidden md:flex items-center gap-6 lg:gap-8 text-white font-medium">
+            <button onClick={() => handleNavClick("Header")} className="hover:text-orange-400">Home</button>
+            <button onClick={() => handleNavClick("About")} className="hover:text-orange-400">About</button>
+            <button onClick={() => handleNavClick("WorkSpaces")} className="hover:text-orange-400">WorkSpaces</button>
+            <button onClick={() => handleNavClick("Testimonials")} className="hover:text-orange-400">Testimonials</button>
+          </ul>
 
-                <button className='hidden md:block bg-white text-black font-medium px-8 py-2 rounded-full hover:bg-orange-500 hover:text-white transition-all duration-300'>
-                    Sign up
-                </button>
+          {/* CTA Button */}
+          <button className="hidden md:block bg-white text-black font-semibold px-6 py-2 rounded-full hover:bg-orange-500 hover:text-white transition-all duration-300">
+            Sign up
+          </button>
 
-                {/* Mobile Menu Icon */}
-                <img
-                    onClick={() => setShowMobileMenu(true)}
-                    src={assets.menu_icon}
-                    className='md:hidden w-7 cursor-pointer invert'
-                    alt='menu icon'
-                />
-            </div>
-
-            {/* Mobile Menu */}
-            <div
-                className={`md:hidden fixed right-0 top-0 bottom-0 bg-white transition-all duration-300 ease-in-out ${showMobileMenu ? 'w-full' : 'w-0 overflow-hidden'
-                    }`}
-            >
-                <div className='flex justify-end p-6 cursor-pointer'>
-                    <img
-                        onClick={() => setShowMobileMenu(false)}
-                        src={assets.cross_icon}
-                        className='w-6'
-                        alt='close menu'
-                    />
-                </div>
-                <ul className='flex flex-col items-center gap-2 mt-5 px-5 text-lg font-medium'>
-                    <a
-                        onClick={() => setShowMobileMenu(false)}
-                        href='#Header'
-                        className='px-4 py-2 rounded-full inline-block'
-                    >
-                        Home
-                    </a>
-                    <a
-                        onClick={() => setShowMobileMenu(false)}
-                        href='#About'
-                        className='px-4 py-2 rounded-full inline-block'
-                    >
-                        About
-                    </a>
-                    <a
-                        onClick={() => setShowMobileMenu(false)}
-                        href='#WorkSpaces'
-                        className='px-4 py-2 rounded-full inline-block'
-                    >
-                        WorkSpaces
-                    </a>
-                    <a
-                        onClick={() => setShowMobileMenu(false)}
-                        href='#Testimonials'
-                        className='px-4 py-2 rounded-full inline-block'
-                    >
-                        Testimonials
-                    </a>
-                </ul>
-            </div>
+          {/* Mobile Menu Icon */}
+          <img
+            onClick={() => setShowMobileMenu(true)}
+            src={assets.menu_icon}
+            className="md:hidden w-6 sm:w-7 cursor-pointer invert"
+            alt="menu icon"
+          />
         </div>
-    )
-}
+      </div>
 
-export default Navbar
+      {/* ✅ Move Mobile Menu OUTSIDE Navbar */}
+      <div
+        className={`md:hidden fixed inset-0 z-[9999] bg-black text-white flex flex-col items-center justify-center transition-all duration-500 ease-in-out ${showMobileMenu ? "opacity-100 visible" : "opacity-0 invisible"
+          }`}
+      >
+        <img
+          onClick={() => setShowMobileMenu(false)}
+          src={assets.cross_icon}
+          className="absolute top-6 right-6 w-6 cursor-pointer"
+          alt="close menu"
+        />
+
+        <ul className="flex flex-col items-center gap-6 text-lg font-semibold">
+          <button onClick={() => handleNavClick("Header")} className="hover:text-orange-400">Home</button>
+          <button onClick={() => handleNavClick("About")} className="hover:text-orange-400">About</button>
+          <button onClick={() => handleNavClick("WorkSpaces")} className="hover:text-orange-400">WorkSpaces</button>
+          <button onClick={() => handleNavClick("Testimonials")} className="hover:text-orange-400">Testimonials</button>
+        </ul>
+
+        <button className="mt-8 bg-orange-500 hover:bg-orange-600 text-white font-medium px-8 py-2 rounded-full transition-all duration-300">
+          Sign up
+        </button>
+      </div>
+    </>
+  );
+
+};
+
+export default Navbar;

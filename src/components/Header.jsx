@@ -1,8 +1,23 @@
 import React from "react";
 import Navbar from "./Navbar";
 import { motion } from "framer-motion";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Header = () => {
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const handleScrollNavigation = (sectionId) => {
+        if (location.pathname !== "/") {
+            navigate("/"); // Go to homepage first
+            setTimeout(() => {
+                document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
+            }, 500);
+        } else {
+            document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
+        }
+    };
+
     return (
         <header
             id="Header"
@@ -39,18 +54,18 @@ const Header = () => {
 
                 {/* Buttons */}
                 <div className="mt-10 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-                    <a
-                        href="#WorkSpaces"
+                    <button
+                        onClick={() => handleScrollNavigation("WorkSpaces")}
                         className="w-full sm:w-auto border border-orange-400 text-orange-400 px-8 py-3 rounded-full text-sm sm:text-base font-medium hover:bg-orange-500 hover:text-white transition-all duration-300"
                     >
                         Explore Workspaces
-                    </a>
-                    <a
-                        href="#Contact"
+                    </button>
+                    <button
+                        onClick={() => handleScrollNavigation("Contact")}
                         className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-full text-sm sm:text-base font-medium transition-all duration-300"
                     >
                         Contact Us
-                    </a>
+                    </button>
                 </div>
             </motion.div>
         </header>

@@ -1,8 +1,16 @@
 import React from "react";
-import { MapPin, Phone, Mail } from "lucide-react";
+import { MapPin, Phone, Mail, Image } from "lucide-react";
 import { assets } from "../assets/assets";
+import { useNavigate } from "react-router-dom";
 
 const Footer = () => {
+    const navigate = useNavigate();
+
+    const handleGalleryRedirect = () => {
+        navigate("/gallery"); // Navigates to /gallery page
+        window.scrollTo(0, 600); // Scroll to top after navigation
+    };
+
     return (
         <footer
             id="Footer"
@@ -11,14 +19,11 @@ const Footer = () => {
             <div className="container mx-auto flex flex-col md:flex-row justify-between gap-12 text-center md:text-left">
 
                 {/* About Section */}
-                <div className="md:w-1/3">
-                    {/*<h2 className="text-2xl font-bold text-white mb-3">
-                        <span className="text-orange-400">V</span>ayuhu
-                    </h2>*/}
+                <div className="md:w-1/2">
                     <img
                         src={assets.brandLogo}
                         alt="Vayuhu Logo"
-                        className="w-32 h-auto md:w-40 object-contain"
+                        className="w-32 h-auto md:w-40 object-contain mb-4 mx-auto md:mx-0"
                     />
 
                     <p className="text-sm leading-relaxed">
@@ -29,16 +34,18 @@ const Footer = () => {
                     </p>
                 </div>
 
-                {/* Quick Links */}
-                <div className="md:w-1/5">
-                    <h3 className="text-white text-lg font-semibold mb-4">Quick Links</h3>
-                    <ul className="flex flex-col gap-2 text-sm">
-                        <a href="#Header" className="hover:text-white transition-all">Home</a>
-                        <a href="#About" className="hover:text-white transition-all">About</a>
-                        <a href="#Projects" className="hover:text-white transition-all">Workspaces</a>
-                        <a href="#Testimonials" className="hover:text-white transition-all">Testimonials</a>
-                        <a href="#Contact" className="hover:text-white transition-all">Contact</a>
-                    </ul>
+                {/* Gallery Redirect Section */}
+                <div className="md:w-1/3 flex flex-col items-center md:items-start justify-center">
+                    <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
+                        <Image className="text-orange-500" size={20} />
+                        Explore Our Space
+                    </h3>
+                    <button
+                        onClick={handleGalleryRedirect}
+                        className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full font-medium transition-all duration-300"
+                    >
+                        View Gallery
+                    </button>
                 </div>
 
                 {/* Contact Info */}
@@ -75,7 +82,10 @@ const Footer = () => {
             <div className="border-t border-gray-700 mt-12 py-6 text-center text-sm text-gray-500">
                 © {new Date().getFullYear()} Vayuhu. All Rights Reserved.
                 <br className="md:hidden" />
-                <span className="text-orange-500"> Built with passion for modern professionals.</span>
+                <span className="text-orange-500">
+                    {" "}
+                    Built with passion for modern professionals.
+                </span>
             </div>
         </footer>
     );
