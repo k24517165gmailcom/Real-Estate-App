@@ -7,11 +7,10 @@ import "react-toastify/dist/ReactToastify.css";
 // Helper function to generate time options in 24-hour format for state storage
 const generateTimeOptions = () => {
     const times = [];
-    // Assuming working hours are 8:00 AM to 8:00 PM (12 hours)
     for (let i = 8; i <= 20; i++) {
         const hour = i % 12 === 0 ? 12 : i % 12;
         const ampm = i < 12 || i === 24 ? "AM" : "PM";
-        const timeValue = `${i.toString().padStart(2, '0')}:00`; // 24-hour format: 08:00, 09:00, 16:00, etc.
+        const timeValue = `${i.toString().padStart(2, '0')}:00`;
         const display = `${hour.toString().padStart(2, '0')}:00 ${ampm}`;
         times.push({ value: timeValue, display: display });
     }
@@ -20,7 +19,7 @@ const generateTimeOptions = () => {
 
 const TIME_OPTIONS = generateTimeOptions();
 
-// NEW HELPER FUNCTION: Correctly formats 24-hour time to 12-hour AM/PM display
+// Correctly formats 24-hour time to 12-hour AM/PM display
 const format24HourTo12Hour = (time24) => {
     if (!time24) return '';
     try {
@@ -34,7 +33,7 @@ const format24HourTo12Hour = (time24) => {
         return `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
     } catch (error) {
         console.error("Time formatting error:", error);
-        return time24; // Return original if error occurs
+        return time24;
     }
 }
 
@@ -56,9 +55,9 @@ const WorkspacePricing = () => {
     const [referral, setReferral] = useState("");
     const [days, setDays] = useState(0);
     const [totalHours, setTotalHours] = useState(1);
+    const [numAttendees, setNumAttendees] = useState(1);
 
     const workspaces = [
-        // ... (Your workspace data remains the same)
         {
             id: "Individual-Working-Space",
             title: "Individual Working Space",
@@ -97,7 +96,7 @@ const WorkspacePricing = () => {
             title: "Video Conferencing",
             desc: "Connect virtually, collaborate seamlessly.",
             type: "Conference Room",
-            capacity: 1,
+            capacity: 8,
             hourly: 100,
             image: "workspaces3.jpg",
         },
@@ -125,47 +124,33 @@ const WorkspacePricing = () => {
         },
     ];
 
-    // Scroll to selected workspace on page load (remains the same)
-    useEffect(() => {
-        if (selectedPlan) {
-            const element = document.getElementById(selectedPlan.replace(/\s+/g, "-"));
-            if (element) element.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-    }, [selectedPlan]);
-
-    // Set default end date on start date change (remains the same)
-    useEffect(() => {
+    // --- EFFECT HOOKS ---
+    useEffect(() => { /* ... scroll to selected plan ... */ }, [selectedPlan]);
+    useEffect(() => { /* ... set default end date ... */
         if (!startDate || !modalData?.planType) return;
-
         const start = new Date(startDate);
         let end = new Date(start);
-
         if (modalData.planType === "Monthly") {
             end.setMonth(start.getMonth() + 1);
             end.setDate(end.getDate() - 1);
         } else if (modalData.planType === "Daily" || modalData.planType === "Hourly") {
             end = new Date(start);
         }
-
         if (!endDate || endDate === startDate) {
             setEndDate(end.toISOString().split("T")[0]);
         }
     }, [startDate, modalData?.planType]);
 
-    // Dynamic day calculation (remains the same)
-    useEffect(() => {
+    useEffect(() => { /* ... dynamic day calculation ... */
         if (startDate && endDate) {
             const start = new Date(startDate);
             const end = new Date(endDate);
-
             if (end < start) {
                 setDays(0);
                 return;
             }
-
             const timeDiff = end.getTime() - start.getTime();
             const dayDiff = timeDiff / (1000 * 60 * 60 * 24);
-
             const calculatedDays = Math.round(dayDiff) + 1;
             setDays(calculatedDays > 0 ? calculatedDays : 1);
         } else {
@@ -173,21 +158,14 @@ const WorkspacePricing = () => {
         }
     }, [startDate, endDate]);
 
-    // Calculate total hours for Hourly plan (remains the same)
-    useEffect(() => {
+    useEffect(() => { /* ... calculate total hours ... */
         if (modalData?.planType === "Hourly" && startTime && endTime) {
             const startHour = parseInt(startTime.split(':')[0]);
             const endHour = parseInt(endTime.split(':')[0]);
-
             let calculatedHours = endHour - startHour;
-
-            if (calculatedHours <= 0) {
-                setTotalHours(1);
-            } else {
-                setTotalHours(calculatedHours);
-            }
+            setTotalHours(calculatedHours > 0 ? calculatedHours : 1);
         } else {
-            setTotalHours(1); // Default to 1 hour
+            setTotalHours(1);
         }
     }, [startTime, endTime, modalData?.planType]);
 
@@ -203,17 +181,23 @@ const WorkspacePricing = () => {
         }
     };
 
-    // Calculate the base amount depending on the plan type and duration (remains the same)
+    // CALCULATE BASE AMOUNT (Remains the same)
     const calculateBaseAmount = () => {
         const basePrice = modalData?.price || 0;
+        let baseAmount = 0;
         if (modalData?.planType === "Daily") {
-            return basePrice * days;
+            baseAmount = basePrice * days;
         } else if (modalData?.planType === "Monthly") {
-            return basePrice;
+            baseAmount = basePrice;
         } else if (modalData?.planType === "Hourly") {
-            return basePrice * totalHours * days;
+            const isPerPersonRate = modalData.title === "Video Conferencing";
+            if (isPerPersonRate) {
+                baseAmount = basePrice * numAttendees * totalHours * days;
+            } else {
+                baseAmount = basePrice * totalHours * days;
+            }
         }
-        return 0;
+        return baseAmount;
     }
 
     const calculateTotal = () => {
@@ -222,7 +206,7 @@ const WorkspacePricing = () => {
         return finalBaseAmount + gst - discount;
     };
 
-    // Helper functions (getDayName and resetState remain the same, but resetState now clears time states)
+    // Helper functions (getDayName and resetState remain the same)
     const getDayName = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
@@ -242,6 +226,7 @@ const WorkspacePricing = () => {
         setReferral("");
         setDays(0);
         setTotalHours(1);
+        setNumAttendees(1);
     };
 
     // Derived values for display
@@ -254,8 +239,8 @@ const WorkspacePricing = () => {
     return (
         <section id="WorkSpaces" className="container mx-auto px-6 md:px-20 lg:px-32 py-20">
             <ToastContainer position="top-center" autoClose={2000} />
-            {/* ... (Header and Workspace Cards JSX remain the same) ... */}
 
+            {/* ... (Header and Workspace Cards JSX remain the same) ... */}
             <div className="text-center mb-12">
                 <h6 className="uppercase text-orange-500 tracking-widest font-medium">Pricing</h6>
                 <h2 className="text-3xl sm:text-5xl font-bold text-gray-800 mt-2">Workspace Plans</h2>
@@ -298,9 +283,10 @@ const WorkspacePricing = () => {
                                                 setStartDate(new Date().toISOString().split("T")[0]);
                                                 setEndDate("");
                                                 setStep(1);
-                                                // Default to a 1-hour booking (4pm to 5pm, or start/end of day for monthly/daily)
-                                                setStartTime(type === "hourly" ? "16:00" : "08:00");
-                                                setEndTime(type === "hourly" ? "17:00" : "20:00");
+                                                // Default times
+                                                setStartTime(type === "hourly" ? "17:00" : "08:00"); // 5 PM
+                                                setEndTime(type === "hourly" ? "18:00" : "20:00");   // 6 PM
+                                                setNumAttendees(1);
                                             }}
                                             className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium mr-2 mb-2 hover:bg-orange-600 transition"
                                         >
@@ -322,7 +308,7 @@ const WorkspacePricing = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                     >
-                        {/* Step 1: Start Date & Time */}
+                        {/* Step 1: Start Date & Time + Attendees */}
                         {step === 1 && (
                             <motion.div
                                 className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl relative"
@@ -354,37 +340,58 @@ const WorkspacePricing = () => {
 
                                 {/* Time Selection (only for Hourly plans) */}
                                 {modalData.planType === "Hourly" && (
-                                    <div className="grid grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <label className="block text-gray-700 mb-2">Start Time:</label>
-                                            <select
-                                                value={startTime}
-                                                onChange={(e) => setStartTime(e.target.value)}
-                                                className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                                            >
-                                                <option value="" disabled>Select Start Time</option>
-                                                {TIME_OPTIONS.slice(0, -1).map(t => (
-                                                    <option key={t.value} value={t.value}>{t.display}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-gray-700 mb-2">End Time:</label>
-                                            <select
-                                                value={endTime}
-                                                onChange={(e) => setEndTime(e.target.value)}
-                                                className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                                                disabled={!startTime}
-                                            >
-                                                <option value="" disabled>Select End Time</option>
-                                                {TIME_OPTIONS.slice(1).map(t => (
-                                                    t.value > startTime && (
+                                    <>
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label className="block text-gray-700 mb-2">Start Time:</label>
+                                                <select
+                                                    value={startTime}
+                                                    onChange={(e) => setStartTime(e.target.value)}
+                                                    className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                                                >
+                                                    <option value="" disabled>Select Start Time</option>
+                                                    {TIME_OPTIONS.slice(0, -1).map(t => (
                                                         <option key={t.value} value={t.value}>{t.display}</option>
-                                                    )
-                                                ))}
-                                            </select>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-gray-700 mb-2">End Time:</label>
+                                                <select
+                                                    value={endTime}
+                                                    onChange={(e) => setEndTime(e.target.value)}
+                                                    className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                                                    disabled={!startTime}
+                                                >
+                                                    <option value="" disabled>Select End Time</option>
+                                                    {TIME_OPTIONS.slice(1).map(t => (
+                                                        t.value > startTime && (
+                                                            <option key={t.value} value={t.value}>{t.display}</option>
+                                                        )
+                                                    ))}
+                                                </select>
+                                            </div>
                                         </div>
-                                    </div>
+
+                                        {/* ATTENDEE INPUT (Only for Video Conferencing Hourly Plan) */}
+                                        {modalData.title === "Video Conferencing" && (
+                                            <div className="mb-4">
+                                                <label className="block text-gray-700 mb-2">Number of Attendees:</label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max={modalData.capacity}
+                                                    value={numAttendees}
+                                                    onChange={(e) => {
+                                                        const val = Math.max(1, Math.min(modalData.capacity, parseInt(e.target.value) || 1));
+                                                        setNumAttendees(val);
+                                                    }}
+                                                    className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                                                    placeholder={`Max ${modalData.capacity} persons`}
+                                                />
+                                            </div>
+                                        )}
+                                    </>
                                 )}
 
 
@@ -400,9 +407,9 @@ const WorkspacePricing = () => {
 
                                 <button
                                     disabled={!termsAccepted || !startDate ||
-                                        (modalData.planType === "Hourly" && (!startTime || !endTime || totalHours <= 0))}
+                                        (modalData.planType === "Hourly" && (!startTime || !endTime || totalHours <= 0 || numAttendees < 1))}
                                     onClick={() => setStep(2)}
-                                    className={`w-full py-2 rounded-lg font-medium transition ${termsAccepted && startDate && totalHours > 0
+                                    className={`w-full py-2 rounded-lg font-medium transition ${termsAccepted && startDate && totalHours > 0 && numAttendees >= 1
                                         ? "bg-orange-500 text-white hover:bg-orange-600"
                                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                                         }`}
@@ -412,7 +419,7 @@ const WorkspacePricing = () => {
                             </motion.div>
                         )}
 
-                        {/* Step 2: End Date for Recurrence */}
+                        {/* Step 2: End Date for Recurrence (FIXED TIME DISPLAY) */}
                         {step === 2 && (
                             <motion.div
                                 className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl relative"
@@ -431,6 +438,7 @@ const WorkspacePricing = () => {
                                 </h3>
                                 <p className="text-gray-600 text-center mb-6">
                                     {modalData.title} & {modalData.planType} Pack
+                                    {/* FIX APPLIED: Use format24HourTo12Hour on both start and end time */}
                                     {modalData.planType === "Hourly" && startTime && endTime && ` from ${format24HourTo12Hour(startTime)} to ${format24HourTo12Hour(endTime)}`}
                                     {modalData.planType !== "Hourly" && ` from 08:00 AM to 08:00 PM`}
                                 </p>
@@ -478,7 +486,7 @@ const WorkspacePricing = () => {
                             </motion.div>
                         )}
 
-                        {/* Step 3: Review Details and Payment */}
+                        {/* Step 3: Review Details and Payment (CLEANED UP LAYOUT) */}
                         {step === 3 && (
                             <motion.div
                                 className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-xl relative overflow-y-auto max-h-[90vh]"
@@ -498,92 +506,93 @@ const WorkspacePricing = () => {
                                 <p className="text-gray-600 text-center mb-6">
                                     Selected Dates: {startDate} – {endDate} ({days} days)
                                     {modalData.planType === "Hourly" && ` (${totalHours} hours/day)`}
+                                    {modalData.title === "Video Conferencing" && ` for ${numAttendees} person(s)`}
                                 </p>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                                    {/* Left column */}
+                                {/* START: Two-Column Clean Layout */}
+                                <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6">
+
+                                    {/* Row 1: Plan & Days/Pack */}
                                     <div>
                                         <label className="block text-gray-700 mb-1">Plan</label>
-                                        <input value={modalData.title} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <input value={modalData.title} readOnly className="w-full border rounded-lg px-3 py-2" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 mb-1">Pack</label>
+                                        <input value={modalData.planType} readOnly className="w-full border rounded-lg px-3 py-2" />
+                                    </div>
 
+                                    {/* Row 2: No of Days / Day of Week (Condensed) */}
+                                    <div>
                                         <label className="block text-gray-700 mb-1">
                                             {modalData.planType === "Monthly" ? "Days Included" : "No of Days"}
                                         </label>
+                                        <input value={days} readOnly className="w-full border rounded-lg px-3 py-2" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 mb-1">
+                                            {modalData.planType !== "Monthly" && days === 1 ? "Day of Week" : (modalData.planType === "Hourly" && days > 1 ? "Days Recurrence" : " ")}
+                                        </label>
                                         <input
-                                            value={days}
+                                            value={modalData.planType !== "Monthly" && days === 1 ? getDayName(startDate) : (modalData.planType === "Hourly" && days > 1 ? `${days} Days` : " ")}
                                             readOnly
-                                            className="w-full border rounded-lg px-3 py-2 mb-3"
+                                            className="w-full border rounded-lg px-3 py-2"
                                         />
-
-                                        <label className="block text-gray-700 mb-1">Start Date</label>
-                                        <input value={startDate} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
-
-                                        <label className="block text-gray-700 mb-1">Start Time</label>
-                                        <input
-                                            // FIX APPLIED HERE
-                                            value={modalData.planType === "Hourly" ? format24HourTo12Hour(startTime) : "08:00 AM"}
-                                            readOnly
-                                            className="w-full border rounded-lg px-3 py-2 mb-3"
-                                        />
-
-                                        <label className="block text-gray-700 mb-1">Amount</label>
-                                        <input value={`₹${displayAmount.toFixed(0)}`} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
-
-                                        <label className="block text-gray-700 mb-1">Total</label>
-                                        <input value={`₹${totalPreDiscount}`} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
-
-                                        <label className="block text-gray-700 mb-1">Discount</label>
-                                        <input value={`₹${discount}`} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
-
-                                        <label className="block text-gray-700 mb-1">Select Referral Source</label>
-                                        <select
-                                            value={referral}
-                                            onChange={(e) => setReferral(e.target.value)}
-                                            className="w-full border rounded-lg px-3 py-2 mb-3"
-                                        >
-                                            <option value="">Select</option>
-                                            <option>Instagram</option>
-                                            <option>Facebook</option>
-                                            <option>Google</option>
-                                            <option>Friend</option>
-                                        </select>
                                     </div>
 
-                                    {/* Right column */}
+                                    {/* Row 3: Start/End Date */}
                                     <div>
-                                        {/* CONDITIONAL FIELD: Day of Week/Placeholder */}
-                                        {(modalData.planType !== "Monthly" && days === 1) && (
-                                            <>
-                                                <label className="block text-gray-700 mb-1">Day of Week</label>
-                                                <input value={getDayName(startDate)} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
-                                            </>
-                                        )}
-                                        {(modalData.planType === "Monthly" || days > 1) && (
-                                            <>
-                                                <label className="block text-gray-700 mb-1"> </label>
-                                                <input value={""} readOnly className="w-full border rounded-lg px-3 py-2 mb-3 border-white bg-transparent" />
-                                            </>
-                                        )}
-
-                                        <label className="block text-gray-700 mb-1">Pack</label>
-                                        <input value={modalData.planType} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
-
+                                        <label className="block text-gray-700 mb-1">Start Date</label>
+                                        <input value={startDate} readOnly className="w-full border rounded-lg px-3 py-2" />
+                                    </div>
+                                    <div>
                                         <label className="block text-gray-700 mb-1">End Date</label>
-                                        <input value={endDate} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <input value={endDate} readOnly className="w-full border rounded-lg px-3 py-2" />
+                                    </div>
 
+                                    {/* Row 4: Start/End Time */}
+                                    <div>
+                                        <label className="block text-gray-700 mb-1">Start Time</label>
+                                        <input
+                                            value={modalData.planType === "Hourly" ? format24HourTo12Hour(startTime) : "08:00 AM"}
+                                            readOnly
+                                            className="w-full border rounded-lg px-3 py-2"
+                                        />
+                                    </div>
+                                    <div>
                                         <label className="block text-gray-700 mb-1">End Time</label>
                                         <input
-                                            // FIX APPLIED HERE
                                             value={modalData.planType === "Hourly" ? format24HourTo12Hour(endTime) : "08:00 PM"}
                                             readOnly
-                                            className="w-full border rounded-lg px-3 py-2 mb-3"
+                                            className="w-full border rounded-lg px-3 py-2"
                                         />
+                                    </div>
 
+                                    {/* Row 5: Amount & GST (Financials start) */}
+                                    <div>
+                                        <label className="block text-gray-700 mb-1">
+                                            Amount (
+                                            {modalData.title === "Video Conferencing" && modalData.planType === "Hourly"
+                                                ? `₹${modalData.price}/hr/person`
+                                                : `₹${modalData.price}/${modalData.planType.toLowerCase()}`
+                                            }
+                                            )
+                                        </label>
+                                        <input value={`₹${displayAmount.toFixed(0)}`} readOnly className="w-full border rounded-lg px-3 py-2" />
+                                    </div>
+                                    <div>
                                         <label className="block text-gray-700 mb-1">GST (18%)</label>
-                                        <input value={`₹${displayGst}`} readOnly className="w-full border rounded-lg px-3 py-2 mb-3" />
+                                        <input value={`₹${displayGst}`} readOnly className="w-full border rounded-lg px-3 py-2" />
+                                    </div>
 
+                                    {/* Row 6: Total & Coupon */}
+                                    <div>
+                                        <label className="block text-gray-700 mb-1">Total (Pre-Discount)</label>
+                                        <input value={`₹${totalPreDiscount}`} readOnly className="w-full border rounded-lg px-3 py-2" />
+                                    </div>
+                                    <div>
                                         <label className="block text-gray-700 mb-1">Apply Coupon</label>
-                                        <div className="flex mb-3">
+                                        <div className="flex">
                                             <input
                                                 value={coupon}
                                                 onChange={(e) => setCoupon(e.target.value)}
@@ -597,17 +606,42 @@ const WorkspacePricing = () => {
                                                 Apply
                                             </button>
                                         </div>
+                                    </div>
 
+                                    {/* Row 7: Discount & Final Total */}
+                                    <div>
+                                        <label className="block text-gray-700 mb-1">Discount</label>
+                                        <input value={`₹${discount}`} readOnly className="w-full border rounded-lg px-3 py-2" />
+                                    </div>
+                                    <div>
                                         <label className="block text-gray-700 mb-1">Final Total (including GST)</label>
                                         <input
                                             value={`₹${finalTotal}`}
                                             readOnly
-                                            className="w-full border rounded-lg px-3 py-2 mb-3 font-semibold"
+                                            className="w-full border rounded-lg px-3 py-2 font-semibold"
                                         />
                                     </div>
-                                </div>
 
-                                <div className="flex justify-between">
+                                    {/* Row 8: Referral Source (Full Width) */}
+                                    <div className="col-span-2">
+                                        <label className="block text-gray-700 mb-1">Select Referral Source</label>
+                                        <select
+                                            value={referral}
+                                            onChange={(e) => setReferral(e.target.value)}
+                                            className="w-full border rounded-lg px-3 py-2"
+                                        >
+                                            <option value="">Select</option>
+                                            <option>Instagram</option>
+                                            <option>Facebook</option>
+                                            <option>Google</option>
+                                            <option>Friend</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                {/* END: Two-Column Clean Layout */}
+
+
+                                <div className="flex justify-between mt-6">
                                     <button
                                         onClick={() => setStep(2)}
                                         className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
