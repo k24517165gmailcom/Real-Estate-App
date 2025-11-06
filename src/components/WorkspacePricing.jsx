@@ -4,6 +4,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+// --- GLOBAL DAY MAPPINGS ---
+const DAY_ABBREVIATIONS_MAP = {
+    'Sunday': 'Sun',
+    'Monday': 'Mon',
+    'Tuesday': 'Tue',
+    'Wednesday': 'Wed',
+    'Thursday': 'Thu',
+    'Friday': 'Fri',
+    'Saturday': 'Sat'
+};
+// ---------------------------
+
 // Helper function to generate time options in 24-hour format for state storage
 const generateTimeOptions = () => {
     const times = [];
@@ -37,6 +49,57 @@ const format24HourTo12Hour = (time24) => {
     }
 }
 
+// Returns the chronological list of working days (Mon-Sat) for the Monthly plan, using abbreviations.
+const getDaysOfWeekInDateRange = (start, end) => {
+    const startObj = new Date(start);
+    const endObj = new Date(end);
+
+    if (!start || !end || startObj > endObj) return '';
+
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const standardWorkingOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    // 1. Identify all unique working days present in the range
+    const daysFoundIndices = new Set();
+    let current = new Date(startObj);
+    while (current <= endObj) {
+        const dayIndex = current.getDay();
+        if (dayIndex !== 0) { // 0 is Sunday. Only track working days.
+            daysFoundIndices.add(dayIndex);
+        }
+        current.setDate(current.getDate() + 1);
+    }
+
+    if (daysFoundIndices.size === 0) return '';
+
+    // 2. Filter the standard order based on the days found
+    const presentWorkingDays = standardWorkingOrder.filter(day => daysFoundIndices.has(dayNames.indexOf(day)));
+
+    // 3. Rotate the list to start with the start date's day
+    const startDayName = dayNames[startObj.getDay()];
+    const startIndex = presentWorkingDays.indexOf(startDayName);
+
+    let rotatedDays = [];
+    if (startIndex !== -1) {
+        rotatedDays = presentWorkingDays.slice(startIndex).concat(presentWorkingDays.slice(0, startIndex));
+    } else {
+        rotatedDays = presentWorkingDays;
+    }
+
+    // 4. Map the full day names to abbreviations before joining
+    const abbreviatedDays = rotatedDays.map(day => DAY_ABBREVIATIONS_MAP[day]);
+
+    return abbreviatedDays.join(', ');
+}
+
+
+// Returns the abbreviated day name for single-day display.
+const getDayAbbreviation = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+    return DAY_ABBREVIATIONS_MAP[dayName] || dayName;
+}
 
 const WorkspacePricing = () => {
     const location = useLocation();
@@ -126,19 +189,23 @@ const WorkspacePricing = () => {
 
     // --- EFFECT HOOKS ---
     useEffect(() => { /* ... scroll to selected plan ... */ }, [selectedPlan]);
-    useEffect(() => { /* ... set default end date ... */
+
+    // FIXED: Set default end date on start date change (handles month length correctly)
+    useEffect(() => {
         if (!startDate || !modalData?.planType) return;
         const start = new Date(startDate);
         let end = new Date(start);
+
         if (modalData.planType === "Monthly") {
+            // Recalculate end date based *only* on the current startDate
             end.setMonth(start.getMonth() + 1);
             end.setDate(end.getDate() - 1);
+            setEndDate(end.toISOString().split("T")[0]);
         } else if (modalData.planType === "Daily" || modalData.planType === "Hourly") {
             end = new Date(start);
-        }
-        if (!endDate || endDate === startDate) {
             setEndDate(end.toISOString().split("T")[0]);
         }
+
     }, [startDate, modalData?.planType]);
 
     useEffect(() => { /* ... dynamic day calculation ... */
@@ -205,13 +272,6 @@ const WorkspacePricing = () => {
         const gst = finalBaseAmount * 0.18;
         return finalBaseAmount + gst - discount;
     };
-
-    // Helper functions (getDayName and resetState remain the same)
-    const getDayName = (dateString) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { weekday: 'long' });
-    }
 
     const resetState = () => {
         setModalData(null);
@@ -419,7 +479,7 @@ const WorkspacePricing = () => {
                             </motion.div>
                         )}
 
-                        {/* Step 2: End Date for Recurrence (FIXED TIME DISPLAY) */}
+                        {/* Step 2: End Date for Recurrence */}
                         {step === 2 && (
                             <motion.div
                                 className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl relative"
@@ -438,9 +498,8 @@ const WorkspacePricing = () => {
                                 </h3>
                                 <p className="text-gray-600 text-center mb-6">
                                     {modalData.title} & {modalData.planType} Pack
-                                    {/* FIX APPLIED: Use format24HourTo12Hour on both start and end time */}
+                                    {/* Using format24HourTo12Hour on both start and end time */}
                                     {modalData.planType === "Hourly" && startTime && endTime && ` from ${format24HourTo12Hour(startTime)} to ${format24HourTo12Hour(endTime)}`}
-                                    {modalData.planType !== "Hourly" && ` from 08:00 AM to 08:00 PM`}
                                 </p>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -486,10 +545,10 @@ const WorkspacePricing = () => {
                             </motion.div>
                         )}
 
-                        {/* Step 3: Review Details and Payment (CLEANED UP LAYOUT) */}
+                        {/* Step 3: Review Details and Payment */}
                         {step === 3 && (
                             <motion.div
-                                className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-xl relative overflow-y-auto max-h-[90vh]"
+                                className="bg-white rounded-2xl p-8 max-w-3xl w-full shadow-xl relative overflow-y-auto max-h-[90vh]"
                                 initial={{ scale: 0.9, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.9, opacity: 0 }}
@@ -512,7 +571,7 @@ const WorkspacePricing = () => {
                                 {/* START: Two-Column Clean Layout */}
                                 <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6">
 
-                                    {/* Row 1: Plan & Days/Pack */}
+                                    {/* Row 1: Plan & Pack (Aligned with screenshot) */}
                                     <div>
                                         <label className="block text-gray-700 mb-1">Plan</label>
                                         <input value={modalData.title} readOnly className="w-full border rounded-lg px-3 py-2" />
@@ -522,19 +581,23 @@ const WorkspacePricing = () => {
                                         <input value={modalData.planType} readOnly className="w-full border rounded-lg px-3 py-2" />
                                     </div>
 
-                                    {/* Row 2: No of Days / Day of Week (Condensed) */}
+                                    {/* Row 2: No of Days & Days of Week List */}
                                     <div>
                                         <label className="block text-gray-700 mb-1">
-                                            {modalData.planType === "Monthly" ? "Days Included" : "No of Days"}
+                                            {modalData.planType === "Monthly" ? "No of Days:" : "No of Days"}
                                         </label>
                                         <input value={days} readOnly className="w-full border rounded-lg px-3 py-2" />
                                     </div>
+
+                                    {/* Right side of Row 2: Days of Week (Chronological & Abbreviated) */}
                                     <div>
-                                        <label className="block text-gray-700 mb-1">
-                                            {modalData.planType !== "Monthly" && days === 1 ? "Day of Week" : (modalData.planType === "Hourly" && days > 1 ? "Days Recurrence" : " ")}
-                                        </label>
+                                        <label className="block text-gray-700 mb-1">Days:</label>
                                         <input
-                                            value={modalData.planType !== "Monthly" && days === 1 ? getDayName(startDate) : (modalData.planType === "Hourly" && days > 1 ? `${days} Days` : " ")}
+                                            value={
+                                                modalData.planType === "Monthly"
+                                                    ? getDaysOfWeekInDateRange(startDate, endDate)
+                                                    : (days === 1 ? getDayAbbreviation(startDate) : `${days} Days Recurrence`)
+                                            }
                                             readOnly
                                             className="w-full border rounded-lg px-3 py-2"
                                         />
