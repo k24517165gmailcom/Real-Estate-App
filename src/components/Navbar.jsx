@@ -70,9 +70,13 @@ const Navbar = () => {
           </ul>
 
           {/* CTA Button */}
-          <button className="hidden md:block bg-white text-black font-semibold px-6 py-2 rounded-full hover:bg-orange-500 hover:text-white transition-all duration-300">
+          <button
+            onClick={() => navigate("/signup", { state: { scrollToSignup: true } })}
+            className="hidden md:block bg-white text-black font-semibold px-6 py-2 rounded-full hover:bg-orange-500 hover:text-white transition-all duration-300"
+          >
             Sign up
           </button>
+
 
           {/* Mobile Menu Icon */}
           <img
@@ -103,9 +107,16 @@ const Navbar = () => {
           <button onClick={() => handleNavClick("Testimonials")} className="hover:text-orange-400">Testimonials</button>
         </ul>
 
-        <button className="mt-8 bg-orange-500 hover:bg-orange-600 text-white font-medium px-8 py-2 rounded-full transition-all duration-300">
+        <button
+          onClick={() => {
+            setShowMobileMenu(false);
+            navigate("/signup", { state: { scrollToSignup: true } });
+          }}
+          className="mt-8 bg-orange-500 hover:bg-orange-600 text-white font-medium px-8 py-2 rounded-full transition-all duration-300"
+        >
           Sign up
         </button>
+
       </div>
     </>
   );

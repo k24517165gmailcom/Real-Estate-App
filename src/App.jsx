@@ -6,6 +6,7 @@ import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import Gallery from './pages/Gallery'
 import AboutPage from './pages/AboutPage'
+import Signup from './pages/Signup'
 //import WorkspacePricing from './pages/WorkspacePricing'
 
 const App = () => {
@@ -18,7 +19,8 @@ const App = () => {
         <Routes>
           {/* Home page shows all sections */}
           <Route path='/' element={<Home />} />
-
+          <Route path="/signup" element={<Signup />} /> {/* 👈 signup route */}
+   
           {/* Add future routes here if needed */}
           <Route path='/gallery' element={<Gallery />} /> 
           <Route path='/about' element={<AboutPage />} /> 
