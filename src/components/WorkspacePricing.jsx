@@ -344,8 +344,25 @@ const WorkspacePricing = () => {
                                                 setEndDate("");
                                                 setStep(1);
                                                 // Default times
-                                                setStartTime(type === "hourly" ? "17:00" : "08:00"); // 5 PM
-                                                setEndTime(type === "hourly" ? "18:00" : "20:00");   // 6 PM
+                                                if (type === "hourly") {
+                                                    const now = new Date();
+
+                                                    // Round current time up to next full hour
+                                                    now.setHours(now.getHours() + (now.getMinutes() > 0 ? 1 : 0), 0, 0, 0);
+
+                                                    const hours24 = now.getHours();
+                                                    const startValue = `${hours24.toString().padStart(2, '0')}:00`;
+                                                    const endHours = Math.min(20, hours24 + 1); // cap at 8 PM
+                                                    const endValue = `${endHours.toString().padStart(2, '0')}:00`;
+
+                                                    setStartTime(startValue);
+                                                    setEndTime(endValue);
+                                                } else {
+                                                    setStartTime("08:00");
+                                                    setEndTime("20:00");
+                                                }
+
+
                                                 setNumAttendees(1);
                                             }}
                                             className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium mr-2 mb-2 hover:bg-orange-600 transition"
@@ -421,10 +438,20 @@ const WorkspacePricing = () => {
                                                     className="w-full border border-gray-300 rounded-lg px-4 py-2"
                                                 >
                                                     <option value="" disabled>Select Start Time</option>
-                                                    {TIME_OPTIONS.slice(0, -1).map(t => (
-                                                        <option key={t.value} value={t.value}>{t.display}</option>
-                                                    ))}
+                                                    {TIME_OPTIONS.slice(0, -1).map(t => {
+                                                        const now = new Date();
+                                                        const currentTimeValue = `${now.getHours().toString().padStart(2, '0')}:00`;
+                                                        const isToday = startDate === new Date().toISOString().split("T")[0];
+                                                        const isPast = isToday && t.value <= currentTimeValue;
+
+                                                        return (
+                                                            <option key={t.value} value={t.value} disabled={isPast}>
+                                                                {t.display} {isPast ? "(Past)" : ""}
+                                                            </option>
+                                                        );
+                                                    })}
                                                 </select>
+
                                             </div>
                                             <div>
                                                 <label className="block text-gray-700 mb-2">End Time:</label>
