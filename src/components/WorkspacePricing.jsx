@@ -403,6 +403,10 @@ const WorkspacePricing = () => {
                                     })()}
                                     className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4"
                                 />
+                                <p className="text-sm text-gray-500 mb-3">
+                                    You can select a start date within the next 2 months only.
+                                </p>
+
 
 
                                 {/* Time Selection (only for Hourly plans) */}
@@ -520,15 +524,19 @@ const WorkspacePricing = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-gray-700 mb-2">Select End Date:</label>
+                                        <label className="block text-gray-700 mb-2">End Date:</label>
                                         <input
                                             type="date"
                                             value={endDate}
-                                            onChange={(e) => setEndDate(e.target.value)}
-                                            min={startDate}
-                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 shadow-sm"
+                                            readOnly
+                                            disabled
+                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 shadow-sm bg-gray-100 cursor-not-allowed text-gray-600"
                                         />
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            End date is auto-calculated based on your selected plan.
+                                        </p>
                                     </div>
+
                                 </div>
 
                                 <div className="flex justify-between">
