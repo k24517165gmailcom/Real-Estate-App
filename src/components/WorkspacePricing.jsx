@@ -395,8 +395,15 @@ const WorkspacePricing = () => {
                                     type="date"
                                     value={startDate}
                                     onChange={(e) => setStartDate(e.target.value)}
+                                    min={new Date().toISOString().split("T")[0]}
+                                    max={(() => {
+                                        const maxDate = new Date();
+                                        maxDate.setMonth(maxDate.getMonth() + 2);
+                                        return maxDate.toISOString().split("T")[0];
+                                    })()}
                                     className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4"
                                 />
+
 
                                 {/* Time Selection (only for Hourly plans) */}
                                 {modalData.planType === "Hourly" && (
