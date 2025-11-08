@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import VirtualOfficeForm from "../components/VirtualOfficeForm";
 
 const VirtualOfficeServices = () => {
     const sections = [
@@ -125,7 +126,10 @@ const VirtualOfficeServices = () => {
                     ))}
                 </div>
             </motion.div>
+            {/* New Form Section */}
+            <VirtualOfficeForm />
         </motion.section>
+
     );
 };
 
