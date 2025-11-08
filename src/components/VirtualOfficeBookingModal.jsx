@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-import { toast } from "react-toastify"; // ✅ Toastify import
+import { toast } from "react-toastify";
 
 const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
   const [startDate, setStartDate] = useState("");
   const [years, setYears] = useState("");
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
 
@@ -34,14 +35,36 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      toast.success("🎉 Booking confirmed successfully!");
-      setStartDate("");
-      setYears("");
-      setErrors({});
-      onClose();
+    if (!validateForm()) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch("http://localhost/vayuhu_backend/virtualoffice_booking.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          start_date: startDate,
+          years: years,
+          user_id: 1 // optional (for now fixed)
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success("🎉 Virtual Office booked successfully!");
+        setStartDate("");
+        setYears("");
+        onClose();
+      } else {
+        toast.error(`❌ ${data.message || "Booking failed."}`);
+      }
+    } catch (error) {
+      toast.error("⚠️ Network error. Please try again later.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -121,9 +144,11 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
               {/* Pay & Book Button */}
               <button
                 type="submit"
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 rounded-xl shadow-md transition-all duration-200"
+                disabled={loading}
+                className={`w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 rounded-xl shadow-md transition-all duration-200 ${loading ? "opacity-70 cursor-not-allowed" : ""
+                  }`}
               >
-                Pay & Book
+                {loading ? "Processing..." : "Pay & Book"}
               </button>
             </form>
           </motion.div>

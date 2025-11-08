@@ -1,1 +1,2 @@
 by default, the HTML <input type="date"> uses the browser’s locale, which often shows mm/dd/yyyy (especially on US settings).
+Would you like me to make the “Pay & Book” button show a temporary loading spinner (e.g., “Processing...”) for 2 seconds before showing the success toast? It gives a more natural user experience flow.
