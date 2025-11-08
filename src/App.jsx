@@ -7,6 +7,7 @@ import 'react-toastify/dist/ReactToastify.css'
 import Gallery from './pages/Gallery'
 import AboutPage from './pages/AboutPage'
 import Signup from './pages/Signup'
+import VirtualOfficeServices from './pages/VirtualOfficeServices'
 //import WorkspacePricing from './pages/WorkspacePricing'
 
 const App = () => {
@@ -24,6 +25,7 @@ const App = () => {
           {/* Add future routes here if needed */}
           <Route path='/gallery' element={<Gallery />} /> 
           <Route path='/about' element={<AboutPage />} /> 
+          <Route path='/virtual' element={<VirtualOfficeServices />} /> 
           {/* <Route path='/workspace-pricing' element={<WorkspacePricing />} /> */}
         </Routes>
       </div>

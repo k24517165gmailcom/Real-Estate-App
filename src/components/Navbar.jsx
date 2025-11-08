@@ -23,9 +23,9 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Smooth navigation handler
+  // Smooth scroll handler
   const handleNavClick = (hash) => {
-    setShowMobileMenu(false); // Close mobile menu after navigation
+    setShowMobileMenu(false);
     if (location.pathname !== "/") {
       navigate("/");
       setTimeout(() => {
@@ -35,6 +35,29 @@ const Navbar = () => {
       document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
     }
   };
+
+  // ✅ Navigate and scroll to Virtual Office section
+const handleVirtualOffice = () => {
+  setShowMobileMenu(false);
+
+  if (location.pathname !== "/virtual") {
+    // Navigate to /virtual first
+    navigate("/virtual");
+
+    // Wait for the page to mount before scrolling
+    setTimeout(() => {
+      document
+        .getElementById("VirtualOfficeServices")
+        ?.scrollIntoView({ behavior: "smooth" });
+    }, 500);
+  } else {
+    // Already on /virtual → just scroll directly
+    document
+      .getElementById("VirtualOfficeServices")
+      ?.scrollIntoView({ behavior: "smooth" });
+  }
+};
+
 
   return (
     <>
@@ -67,6 +90,8 @@ const Navbar = () => {
             <button onClick={() => handleNavClick("About")} className="hover:text-orange-400">About</button>
             <button onClick={() => handleNavClick("WorkSpaces")} className="hover:text-orange-400">WorkSpaces</button>
             <button onClick={() => handleNavClick("Testimonials")} className="hover:text-orange-400">Testimonials</button>
+            {/* ✅ New Virtual Office NavLink */}
+            <button onClick={handleVirtualOffice} className="hover:text-orange-400">Virtual Office</button>
           </ul>
 
           {/* CTA Button */}
@@ -76,7 +101,6 @@ const Navbar = () => {
           >
             Sign up
           </button>
-
 
           {/* Mobile Menu Icon */}
           <img
@@ -88,7 +112,7 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* ✅ Move Mobile Menu OUTSIDE Navbar */}
+      {/* ✅ Mobile Menu */}
       <div
         className={`md:hidden fixed inset-0 z-[9999] bg-black text-white flex flex-col items-center justify-center transition-all duration-500 ease-in-out ${showMobileMenu ? "opacity-100 visible" : "opacity-0 invisible"
           }`}
@@ -105,6 +129,8 @@ const Navbar = () => {
           <button onClick={() => handleNavClick("About")} className="hover:text-orange-400">About</button>
           <button onClick={() => handleNavClick("WorkSpaces")} className="hover:text-orange-400">WorkSpaces</button>
           <button onClick={() => handleNavClick("Testimonials")} className="hover:text-orange-400">Testimonials</button>
+          {/* ✅ New Virtual Office NavLink for Mobile */}
+          <button onClick={handleVirtualOffice} className="hover:text-orange-400">Virtual Office</button>
         </ul>
 
         <button
@@ -116,11 +142,9 @@ const Navbar = () => {
         >
           Sign up
         </button>
-
       </div>
     </>
   );
-
 };
 
 export default Navbar;
