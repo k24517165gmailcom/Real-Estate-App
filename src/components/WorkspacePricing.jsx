@@ -755,10 +755,47 @@ const WorkspacePricing = () => {
                                     </button>
                                     <button
                                         onClick={() => {
-                                            toast.success("Booking Confirmed!");
-                                            setTimeout(() => {
-                                                resetState();
-                                            }, 1500);
+                                            const bookingData = {
+                                                workspace_id: modalData.id,
+                                                workspace_title: modalData.title,
+                                                plan_type: modalData.planType,
+                                                start_date: startDate,
+                                                end_date: endDate,
+                                                start_time: startTime || null,
+                                                end_time: endTime || null,
+                                                total_days: days,
+                                                total_hours: totalHours,
+                                                num_attendees: numAttendees,
+                                                price_per_unit: modalData.price,
+                                                base_amount: displayAmount,
+                                                gst_amount: parseFloat(displayGst),
+                                                discount_amount: discount,
+                                                final_amount: parseFloat(finalTotal),
+                                                coupon_code: coupon || null,
+                                                referral_source: referral || null,
+                                                terms_accepted: termsAccepted ? 1 : 0,
+                                            };
+
+                                            fetch("http://localhost/vayuhu_backend/workspace_booking.php", {
+                                                method: "POST",
+                                                headers: {
+                                                    "Content-Type": "application/json",
+                                                },
+                                                body: JSON.stringify(bookingData),
+                                            })
+                                                .then((res) => res.json())
+                                                .then((data) => {
+                                                    if (data.success) {
+                                                        toast.success("Booking saved successfully!");
+                                                        setTimeout(() => resetState(), 1500);
+                                                    } else {
+                                                        toast.error("Booking failed: " + data.message);
+                                                    }
+                                                })
+                                                .catch((err) => {
+                                                    toast.error("Error: " + err.message);
+                                                });
+
                                         }}
                                         className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
                                     >
