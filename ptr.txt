@@ -1,0 +1,1 @@
+by default, the HTML <input type="date"> uses the browser’s locale, which often shows mm/dd/yyyy (especially on US settings).

@@ -2,10 +2,12 @@ import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { Send, User, Mail, Phone, MessageSquare } from "lucide-react";
+import VirtualOfficeBookingModal from "./VirtualOfficeBookingModal";
 
 const VirtualOfficeForm = () => {
     const [result, setResult] = useState("");
     const nameInputRef = useRef(null); // 👈 Ref for focusing
+    const [showModal, setShowModal] = useState(false);
 
     // Handle form submission
     const onSubmit = async (event) => {
@@ -54,11 +56,11 @@ const VirtualOfficeForm = () => {
             {/* Action Buttons */}
             <div className="flex justify-center gap-4 mb-8">
                 <button
-                    className="flex items-center gap-2 bg-white text-orange-600 border border-orange-300 px-6 py-2 rounded-xl shadow-md hover:bg-orange-50 hover:shadow-lg transition-all duration-300"
+                    onClick={() => setShowModal(true)}
+                    className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-6 rounded-lg shadow"
                 >
-                    <span>»</span> Book Now
+                    Book Now
                 </button>
-
                 <button
                     onClick={handleEnquiryClick}
                     className="flex items-center gap-2 bg-white text-orange-600 border border-orange-300 px-6 py-2 rounded-xl shadow-md hover:bg-orange-50 hover:shadow-lg transition-all duration-300"
@@ -119,7 +121,6 @@ const VirtualOfficeForm = () => {
                     <div className="relative">
                         <select
                             name="Referral"
-                            required
                             className="w-full border border-gray-300 rounded-lg py-3 px-4 pr-10 focus:border-orange-500 focus:ring-1 focus:ring-orange-400 outline-none transition"
                         >
                             <option value="">Referral Source</option>
@@ -151,6 +152,12 @@ const VirtualOfficeForm = () => {
                     <span>»</span> {result ? result : "Submit"}
                 </button>
             </form>
+
+            {/* Modal Component */}
+            <VirtualOfficeBookingModal
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+            />
         </motion.section>
     );
 };
