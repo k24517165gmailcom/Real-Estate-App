@@ -7,6 +7,27 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+
+    // 🔔 Listen for user updates (after signup or logout)
+    const handleUserUpdate = () => {
+      const updatedUser = localStorage.getItem("user");
+      setUser(updatedUser ? JSON.parse(updatedUser) : null);
+    };
+
+    window.addEventListener("userUpdated", handleUserUpdate);
+
+    return () => {
+      window.removeEventListener("userUpdated", handleUserUpdate);
+    };
+  }, []);
+
 
   // Disable body scroll when mobile menu is open
   useEffect(() => {
@@ -37,26 +58,26 @@ const Navbar = () => {
   };
 
   // ✅ Navigate and scroll to Virtual Office section
-const handleVirtualOffice = () => {
-  setShowMobileMenu(false);
+  const handleVirtualOffice = () => {
+    setShowMobileMenu(false);
 
-  if (location.pathname !== "/virtual") {
-    // Navigate to /virtual first
-    navigate("/virtual");
+    if (location.pathname !== "/virtual") {
+      // Navigate to /virtual first
+      navigate("/virtual");
 
-    // Wait for the page to mount before scrolling
-    setTimeout(() => {
+      // Wait for the page to mount before scrolling
+      setTimeout(() => {
+        document
+          .getElementById("VirtualOfficeServices")
+          ?.scrollIntoView({ behavior: "smooth" });
+      }, 500);
+    } else {
+      // Already on /virtual → just scroll directly
       document
         .getElementById("VirtualOfficeServices")
         ?.scrollIntoView({ behavior: "smooth" });
-    }, 500);
-  } else {
-    // Already on /virtual → just scroll directly
-    document
-      .getElementById("VirtualOfficeServices")
-      ?.scrollIntoView({ behavior: "smooth" });
-  }
-};
+    }
+  };
 
 
   return (
@@ -96,11 +117,20 @@ const handleVirtualOffice = () => {
 
           {/* CTA Button */}
           <button
-            onClick={() => navigate("/signup", { state: { scrollToSignup: true } })}
+            onClick={() => {
+              if (user) {
+                navigate("/my-account");
+              } else {
+                navigate("/auth");
+              }
+            }}
             className="hidden md:block bg-white text-black font-semibold px-6 py-2 rounded-full hover:bg-orange-500 hover:text-white transition-all duration-300"
           >
-            Sign up
+            {user ? "My Account" : "Sign up / Login"}
           </button>
+
+
+
 
           {/* Mobile Menu Icon */}
           <img
@@ -136,12 +166,18 @@ const handleVirtualOffice = () => {
         <button
           onClick={() => {
             setShowMobileMenu(false);
-            navigate("/signup", { state: { scrollToSignup: true } });
+            if (user) {
+              navigate("/my-account");
+            } else {
+              navigate("/auth");
+            }
           }}
           className="mt-8 bg-orange-500 hover:bg-orange-600 text-white font-medium px-8 py-2 rounded-full transition-all duration-300"
         >
-          Sign up
+          {user ? "My Account" : "Sign up / Login"}
         </button>
+
+
       </div>
     </>
   );
