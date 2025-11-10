@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Sidebar from "./Sidebar";
 import { Menu } from "lucide-react";
+import { assets } from "../assets/assets"; // ✅ import your logo asset
 
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -29,7 +30,13 @@ const Layout = ({ children }) => {
       <div className="flex flex-col flex-1 h-screen overflow-hidden">
         {/* Top Bar (Mobile Only) */}
         <header className="lg:hidden flex items-center justify-between px-4 py-3 border-b bg-white shadow-sm">
-          <h1 className="text-xl font-semibold text-orange-500">Vayuhu</h1>
+          {/* ✅ Replace text with logo */}
+          <img
+            src={assets.brandLogo}
+            alt="Vayuhu Logo"
+            className="w-28 sm:w-32 cursor-pointer"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          />
           <button
             onClick={() => setSidebarOpen(true)}
             aria-label="Open Sidebar"

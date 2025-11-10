@@ -13,13 +13,14 @@ import Auth from './pages/Auth';
 
 // Dashboard Pages
 import Dashboard from './pages/Dashboard';
-//import Profile from './pages/Profile';
-//import CompanyProfile from './pages/CompanyProfile';
+import Profile from './pages/Profile';
+import CompanyProfile from './pages/CompanyProfile';
 import Reservations from './pages/Reservations';
-import MyAccount from './pages/MyAccount';
+//import MyAccount from './pages/MyAccount';
 
 // Protected Route Wrapper
 import ProtectedRoute from './components/ProtectedRoute';
+import Visitors from './pages/Visitors';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -67,7 +68,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-          {/*<Route
+          <Route
             path="/profile"
             element={
               <ProtectedRoute>
@@ -75,14 +76,14 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-          <Route
+         <Route
             path="/company-profile"
             element={
               <ProtectedRoute>
                 <CompanyProfile />
               </ProtectedRoute>
             }
-          />*/}
+          />
           <Route
             path="/reservations"
             element={
@@ -92,13 +93,21 @@ const App = () => {
             }
           />
           <Route
+            path="/visitors"
+            element={
+              <ProtectedRoute>
+                <Visitors />
+              </ProtectedRoute>
+            }
+          />
+          {/*<Route
             path="/my-account"
             element={
               <ProtectedRoute>
                 <MyAccount />
               </ProtectedRoute>
             }
-          />
+          />*/}
         </Routes>
       </Layout>
     </Router>
