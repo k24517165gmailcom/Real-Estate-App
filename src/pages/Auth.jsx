@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(false); // Toggle between Login / Signup
+  const [isLogin, setIsLogin] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,9 +17,7 @@ const Auth = () => {
       ? "http://localhost/vayuhu_backend/login.php"
       : "http://localhost/vayuhu_backend/signup.php";
 
-    const payload = isLogin
-      ? { email, password }
-      : { name, email, password };
+    const payload = { email, password, ...(isLogin ? {} : { name }) };
 
     try {
       const response = await fetch(url, {
@@ -32,14 +30,9 @@ const Auth = () => {
       setMessage(result.message);
 
       if (result.status === "success" && result.user) {
-        // ✅ Save user info in localStorage
         localStorage.setItem("user", JSON.stringify(result.user));
-
-        // 🔔 Notify Navbar of user login/signup
         window.dispatchEvent(new Event("userUpdated"));
-
-        // ✅ Redirect to My Account page
-        setTimeout(() => navigate("/my-account"), 800);
+        setTimeout(() => navigate("/dashboard"), 800);
       }
     } catch (error) {
       console.error("Auth error:", error);
@@ -94,7 +87,6 @@ const Auth = () => {
           )}
         </form>
 
-        {/* Toggle Link */}
         <p className="text-center text-sm mt-6">
           {isLogin ? "Don’t have an account?" : "Already have an account?"}{" "}
           <span

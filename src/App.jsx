@@ -1,34 +1,96 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header';
-import Home from './pages/Home';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
+// Public Pages
+import Home from './pages/Home';
 import Gallery from './pages/Gallery';
 import AboutPage from './pages/AboutPage';
 import VirtualOfficeServices from './pages/VirtualOfficeServices';
-import MyAccount from './pages/MyAccount';
 import Auth from './pages/Auth';
-import ProtectedRoute from './components/ProtectedRoute'; // 👈 new import
+
+// Dashboard Pages
+import Dashboard from './pages/Dashboard';
+//import Profile from './pages/Profile';
+//import CompanyProfile from './pages/CompanyProfile';
+import Reservations from './pages/Reservations';
+import MyAccount from './pages/MyAccount';
+
+// Protected Route Wrapper
+import ProtectedRoute from './components/ProtectedRoute';
+
+const Layout = ({ children }) => {
+  const location = useLocation();
+
+  // 🧠 Hide Header on these dashboard routes only
+  const hideHeaderRoutes = [
+    '/dashboard',
+    '/profile',
+    '/company-profile',
+    '/reservations',
+    '/visitors',
+  ];
+
+  const hideHeader = hideHeaderRoutes.some((route) =>
+    location.pathname.startsWith(route)
+  );
+
+  return (
+    <div className="w-full overflow-hidden">
+      <ToastContainer />
+      {!hideHeader && <Header />} {/* ✅ show Header except for dashboard routes */}
+      {children}
+    </div>
+  );
+};
 
 const App = () => {
   return (
     <Router>
-      <div className="w-full overflow-hidden">
-        <ToastContainer />
-        <Header />
-
+      <Layout>
         <Routes>
-          {/* 👇 Protected routes */}
+          {/* 🧡 Public Routes */}
+          <Route path="/" element={<Home />} />
+          <Route path="/gallery" element={<Gallery />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/virtual" element={<VirtualOfficeServices />} />
+          <Route path="/auth" element={<Auth />} />
+
+          {/* 🔒 Protected Dashboard Routes */}
           <Route
-            path="/"
+            path="/dashboard"
             element={
               <ProtectedRoute>
-                <Home />
+                <Dashboard />
               </ProtectedRoute>
             }
           />
-
+          {/*<Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/company-profile"
+            element={
+              <ProtectedRoute>
+                <CompanyProfile />
+              </ProtectedRoute>
+            }
+          />*/}
+          <Route
+            path="/reservations"
+            element={
+              <ProtectedRoute>
+                <Reservations />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/my-account"
             element={
@@ -37,14 +99,8 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-
-          {/* 👇 Public routes */}
-          <Route path="/gallery" element={<Gallery />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/virtual" element={<VirtualOfficeServices />} />
-          <Route path="/auth" element={<Auth />} />
         </Routes>
-      </div>
+      </Layout>
     </Router>
   );
 };
