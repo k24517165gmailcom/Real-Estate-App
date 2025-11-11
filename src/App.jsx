@@ -19,14 +19,47 @@ import Reservations from "./pages/Reservations";
 import Visitors from "./pages/Visitors";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-// 🧑‍💼 Admin Pages
+// 🧑‍💼 Admin Layout + Login
 import AdminLayout from "./layouts/AdminLayout";
-import AdminDashboard from "./pages/Admin/AdminDashboard";
-import AdminUsers from "./pages/Admin/AdminUsers";
-import AdminReports from "./pages/Admin/AdminReports";
-import AdminSettings from "./pages/Admin/AdminSettings";
 import AdminLogin from "./pages/Admin/AdminLogin";
 import ProtectedRouteAdmin from "./components/ProtectedRouteAdmin";
+
+// 🧩 Admin Pages
+import AdminDashboard from "./pages/Admin/AdminDashboard";
+
+// 2️⃣ User Management
+import AddUser from "./pages/Admin/AddUser";
+import UserList from "./pages/Admin/UserList";
+
+// 3️⃣ Reservations
+import AdminReservations from "./pages/Admin/Reservations";
+
+// 4️⃣ Visitors
+import AdminVisitors from "./pages/Admin/Visitors";
+
+// 5️⃣ Coupon Codes
+import AddCoupon from "./pages/Admin/AddCoupon";
+import CouponList from "./pages/Admin/CouponList";
+
+// 6️⃣ Space Master
+import AddSpaceMaster from "./pages/Admin/AddSpaceMaster";
+import SpaceMasterList from "./pages/Admin/SpaceMasterList";
+
+// 7️⃣ Contact Request
+import AddContact from "./pages/Admin/AddContact";
+import ContactList from "./pages/Admin/ContactList";
+
+// 8️⃣ Blog
+import AddBlog from "./pages/Admin/AddBlog";
+import BlogList from "./pages/Admin/BlogList";
+
+// 9️⃣ Virtual Office
+import VirtualOfficePrice from "./pages/Admin/VirtualOfficePrice";
+import VirtualOfficeBookings from "./pages/Admin/VirtualOfficeBookings";
+import VirtualOfficeEnquiries from "./pages/Admin/VirtualOfficeEnquiries";
+
+// ⚙️ Admin Settings
+import AdminSettings from "./pages/Admin/AdminSettings";
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -38,7 +71,7 @@ const Layout = ({ children }) => {
     "/company-profile",
     "/reservations",
     "/visitors",
-    "/admin", // ✅ hide header for all admin routes
+    "/admin",
   ];
 
   const hideHeader = hideHeaderRoutes.some((route) =>
@@ -59,14 +92,14 @@ const App = () => {
     <Router>
       <Layout>
         <Routes>
-          {/* 🧡 Public Routes */}
+          {/* 🌐 Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/virtual" element={<VirtualOfficeServices />} />
           <Route path="/auth" element={<Auth />} />
 
-          {/* 🔒 Protected User Dashboard Routes */}
+          {/* 👤 User Dashboard Routes */}
           <Route
             path="/dashboard"
             element={
@@ -108,8 +141,8 @@ const App = () => {
             }
           />
 
-          {/* 🧑‍💼 Admin Routes */}
-          <Route path="/admin-login" element={<AdminLogin />} /> {/* ✅ Admin Login Route */}
+          {/* 🧑‍💼 Admin Login */}
+          <Route path="/admin-login" element={<AdminLogin />} />
 
           {/* 🔒 Protected Admin Routes */}
           <Route
@@ -122,26 +155,174 @@ const App = () => {
               </ProtectedRouteAdmin>
             }
           />
+
+          {/* 2️⃣ User Management */}
           <Route
-            path="/admin/users"
+            path="/admin/add-user"
             element={
               <ProtectedRouteAdmin>
                 <AdminLayout>
-                  <AdminUsers />
+                  <AddUser />
                 </AdminLayout>
               </ProtectedRouteAdmin>
             }
           />
           <Route
-            path="/admin/reports"
+            path="/admin/user-list"
             element={
               <ProtectedRouteAdmin>
                 <AdminLayout>
-                  <AdminReports />
+                  <UserList />
                 </AdminLayout>
               </ProtectedRouteAdmin>
             }
           />
+
+          {/* 3️⃣ Reservations */}
+          <Route
+            path="/admin/reservations"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <AdminReservations />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+
+          {/* 4️⃣ Visitors */}
+          <Route
+            path="/admin/visitors"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <AdminVisitors />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+
+          {/* 5️⃣ Coupon Codes */}
+          <Route
+            path="/admin/add-coupon"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <AddCoupon />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+          <Route
+            path="/admin/coupon-list"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <CouponList />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+
+          {/* 6️⃣ Space Master */}
+          <Route
+            path="/admin/add-space-master"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <AddSpaceMaster />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+          <Route
+            path="/admin/space-master-list"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <SpaceMasterList />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+
+          {/* 7️⃣ Contact Request */}
+          <Route
+            path="/admin/add-contact"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <AddContact />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+          <Route
+            path="/admin/contact-list"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <ContactList />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+
+          {/* 8️⃣ Blog */}
+          <Route
+            path="/admin/add-blog"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <AddBlog />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+          <Route
+            path="/admin/blog-list"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <BlogList />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+
+          {/* 9️⃣ Virtual Office */}
+          <Route
+            path="/admin/virtual-office-price"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <VirtualOfficePrice />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+          <Route
+            path="/admin/virtual-office-bookings"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <VirtualOfficeBookings />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+          <Route
+            path="/admin/virtual-office-enquiries"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <VirtualOfficeEnquiries />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+
+          {/* ⚙️ Admin Settings */}
           <Route
             path="/admin/settings"
             element={
