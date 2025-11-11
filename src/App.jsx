@@ -1,37 +1,44 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import Header from './components/Header';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import Header from "./components/Header";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-// Public Pages
-import Home from './pages/Home';
-import Gallery from './pages/Gallery';
-import AboutPage from './pages/AboutPage';
-import VirtualOfficeServices from './pages/VirtualOfficeServices';
-import Auth from './pages/Auth';
+// 🌐 Public Pages
+import Home from "./pages/Home";
+import Gallery from "./pages/Gallery";
+import AboutPage from "./pages/AboutPage";
+import VirtualOfficeServices from "./pages/VirtualOfficeServices";
+import Auth from "./pages/Auth";
 
-// Dashboard Pages
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import CompanyProfile from './pages/CompanyProfile';
-import Reservations from './pages/Reservations';
-//import MyAccount from './pages/MyAccount';
+// 👤 User Dashboard Pages
+import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
+import CompanyProfile from "./pages/CompanyProfile";
+import Reservations from "./pages/Reservations";
+import Visitors from "./pages/Visitors";
+import ProtectedRoute from "./components/ProtectedRoute";
 
-// Protected Route Wrapper
-import ProtectedRoute from './components/ProtectedRoute';
-import Visitors from './pages/Visitors';
+// 🧑‍💼 Admin Pages
+import AdminLayout from "./layouts/AdminLayout";
+import AdminDashboard from "./pages/Admin/AdminDashboard";
+import AdminUsers from "./pages/Admin/AdminUsers";
+import AdminReports from "./pages/Admin/AdminReports";
+import AdminSettings from "./pages/Admin/AdminSettings";
+import AdminLogin from "./pages/Admin/AdminLogin";
+import ProtectedRouteAdmin from "./components/ProtectedRouteAdmin";
 
 const Layout = ({ children }) => {
   const location = useLocation();
 
-  // 🧠 Hide Header on these dashboard routes only
+  // 🧠 Hide header for dashboard + admin routes
   const hideHeaderRoutes = [
-    '/dashboard',
-    '/profile',
-    '/company-profile',
-    '/reservations',
-    '/visitors',
+    "/dashboard",
+    "/profile",
+    "/company-profile",
+    "/reservations",
+    "/visitors",
+    "/admin", // ✅ hide header for all admin routes
   ];
 
   const hideHeader = hideHeaderRoutes.some((route) =>
@@ -41,7 +48,7 @@ const Layout = ({ children }) => {
   return (
     <div className="w-full overflow-hidden">
       <ToastContainer />
-      {!hideHeader && <Header />} {/* ✅ show Header except for dashboard routes */}
+      {!hideHeader && <Header />}
       {children}
     </div>
   );
@@ -59,7 +66,7 @@ const App = () => {
           <Route path="/virtual" element={<VirtualOfficeServices />} />
           <Route path="/auth" element={<Auth />} />
 
-          {/* 🔒 Protected Dashboard Routes */}
+          {/* 🔒 Protected User Dashboard Routes */}
           <Route
             path="/dashboard"
             element={
@@ -76,7 +83,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-         <Route
+          <Route
             path="/company-profile"
             element={
               <ProtectedRoute>
@@ -100,14 +107,51 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-          {/*<Route
-            path="/my-account"
+
+          {/* 🧑‍💼 Admin Routes */}
+          <Route path="/admin-login" element={<AdminLogin />} /> {/* ✅ Admin Login Route */}
+
+          {/* 🔒 Protected Admin Routes */}
+          <Route
+            path="/admin"
             element={
-              <ProtectedRoute>
-                <MyAccount />
-              </ProtectedRoute>
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <AdminDashboard />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
             }
-          />*/}
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <AdminUsers />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <AdminReports />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <AdminSettings />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
         </Routes>
       </Layout>
     </Router>
