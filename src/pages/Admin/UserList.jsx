@@ -26,32 +26,44 @@ const UserList = () => {
     }
   };
 
-  // Update user details to backend
-  const handleSaveUser = async (updatedData) => {
-    try {
-      const response = await fetch("http://localhost/vayuhu_backend/update_user.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: selectedUser.id,
-          ...updatedData,
-        }),
-      });
+  // Update user details to backend (supports image upload)
+const handleSaveUser = async (updatedData) => {
+  try {
+    const formData = new FormData();
 
-      const data = await response.json();
+    formData.append("id", selectedUser.id);
+    formData.append("name", updatedData.name);
+    formData.append("email", updatedData.email);
+    formData.append("phone", updatedData.phone);
+    formData.append("dob", updatedData.dob);
+    formData.append("address", updatedData.address);
+    formData.append("password", updatedData.password || "");
 
-      if (data.success) {
-        toast.success("User updated successfully!");
-        fetchUsers();
-        setSelectedUser(null);
-      } else {
-        toast.error(data.message || "Failed to update user.");
-      }
-    } catch (error) {
-      console.error("Error updating user:", error);
-      toast.error("Something went wrong!");
+    // ✅ Append profilePic only if user selected a new one
+    if (updatedData.profilePic) {
+      formData.append("profilePic", updatedData.profilePic);
     }
-  };
+
+    const response = await fetch("http://localhost/vayuhu_backend/update_user.php", {
+      method: "POST",
+      body: formData, // ⚠️ No need for Content-Type header (browser auto-sets boundary)
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      toast.success("User updated successfully!");
+      fetchUsers();
+      setSelectedUser(null);
+    } else {
+      toast.error(data.message || "Failed to update user.");
+    }
+  } catch (error) {
+    console.error("Error updating user:", error);
+    toast.error("Something went wrong!");
+  }
+};
+
 
   // Filtered & paginated users
   const filteredUsers = users.filter(

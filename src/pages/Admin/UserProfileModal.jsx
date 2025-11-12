@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 const UserProfileModal = ({ user, onClose, onSave }) => {
   const [formData, setFormData] = useState({
@@ -9,6 +9,9 @@ const UserProfileModal = ({ user, onClose, onSave }) => {
     address: "",
     password: "",
   });
+  const [profilePic, setProfilePic] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (user) {
@@ -20,6 +23,7 @@ const UserProfileModal = ({ user, onClose, onSave }) => {
         address: user.address || "",
         password: "",
       });
+      setPreview(user.profile_pic || null); // existing image URL if available
     }
   }, [user]);
 
@@ -28,9 +32,29 @@ const UserProfileModal = ({ user, onClose, onSave }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Handle file input trigger
+  const handleProfileClick = () => {
+    fileInputRef.current.click();
+  };
+
+  // Handle file selection and preview
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProfilePic(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    const updatedData = { ...formData };
+    if (profilePic) updatedData.profilePic = profilePic;
+    onSave(updatedData);
   };
 
   if (!user) return null;
@@ -51,11 +75,33 @@ const UserProfileModal = ({ user, onClose, onSave }) => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Profile Icon */}
-          <div className="col-span-1 flex justify-center md:justify-start mb-4 md:mb-0">
-            <div className="w-24 h-24 rounded-full border-2 border-orange-400 flex items-center justify-center bg-gray-50 text-gray-400 text-5xl">
-              👤
+          {/* Profile Picture */}
+          <div className="col-span-1 flex flex-col items-center justify-center mb-4 md:mb-0">
+            <div
+              onClick={handleProfileClick}
+              className="relative w-28 h-28 rounded-full border-2 border-orange-400 flex items-center justify-center bg-gray-50 text-gray-400 text-5xl cursor-pointer hover:opacity-80 transition"
+            >
+              {preview ? (
+                <img
+                  src={preview}
+                  alt="Profile Preview"
+                  className="w-full h-full rounded-full object-cover"
+                />
+              ) : (
+                "👤"
+              )}
+              <div className="absolute bottom-0 right-0 bg-orange-500 text-white text-xs rounded-full px-1.5 py-0.5 shadow-md">
+                Edit
+              </div>
             </div>
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <p className="text-xs text-gray-500 mt-1">Click to change photo</p>
           </div>
 
           {/* Name */}
