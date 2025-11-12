@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { toast } from "react-toastify"; // ✅ Import toastify
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import UserProfileModal from "./UserProfileModal";
 
@@ -9,6 +9,7 @@ const UserList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null); // ✅ For image preview modal
 
   // Fetch users from backend
   useEffect(() => {
@@ -26,44 +27,42 @@ const UserList = () => {
     }
   };
 
-  // Update user details to backend (supports image upload)
-const handleSaveUser = async (updatedData) => {
-  try {
-    const formData = new FormData();
+  // Update user details (supports image upload)
+  const handleSaveUser = async (updatedData) => {
+    try {
+      const formData = new FormData();
+      formData.append("id", selectedUser.id);
+      formData.append("name", updatedData.name);
+      formData.append("email", updatedData.email);
+      formData.append("phone", updatedData.phone);
+      formData.append("dob", updatedData.dob);
+      formData.append("address", updatedData.address);
+      formData.append("password", updatedData.password || "");
 
-    formData.append("id", selectedUser.id);
-    formData.append("name", updatedData.name);
-    formData.append("email", updatedData.email);
-    formData.append("phone", updatedData.phone);
-    formData.append("dob", updatedData.dob);
-    formData.append("address", updatedData.address);
-    formData.append("password", updatedData.password || "");
+      // ✅ Append profilePic only if user selected a new one
+      if (updatedData.profilePic) {
+        formData.append("profilePic", updatedData.profilePic);
+      }
 
-    // ✅ Append profilePic only if user selected a new one
-    if (updatedData.profilePic) {
-      formData.append("profilePic", updatedData.profilePic);
+      const response = await fetch("http://localhost/vayuhu_backend/update_user.php", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success("User updated successfully!");
+        fetchUsers();
+        setSelectedUser(null);
+      } else {
+        toast.error(data.message || "Failed to update user.");
+      }
+    } catch (error) {
+      console.error("Error updating user:", error);
+      toast.error("Something went wrong!");
     }
-
-    const response = await fetch("http://localhost/vayuhu_backend/update_user.php", {
-      method: "POST",
-      body: formData, // ⚠️ No need for Content-Type header (browser auto-sets boundary)
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      toast.success("User updated successfully!");
-      fetchUsers();
-      setSelectedUser(null);
-    } else {
-      toast.error(data.message || "Failed to update user.");
-    }
-  } catch (error) {
-    console.error("Error updating user:", error);
-    toast.error("Something went wrong!");
-  }
-};
-
+  };
 
   // Filtered & paginated users
   const filteredUsers = users.filter(
@@ -119,6 +118,7 @@ const handleSaveUser = async (updatedData) => {
           <thead>
             <tr className="bg-orange-50 text-left text-gray-700">
               <th className="py-2 px-4 border">S.No.</th>
+              <th className="py-2 px-4 border">Profile Pic</th> {/* ✅ New column */}
               <th className="py-2 px-4 border">Name</th>
               <th className="py-2 px-4 border">Mobile No</th>
               <th className="py-2 px-4 border">Email ID</th>
@@ -136,6 +136,23 @@ const handleSaveUser = async (updatedData) => {
                   className="text-center hover:bg-orange-50 transition"
                 >
                   <td className="py-2 px-4 border">{indexOfFirst + index + 1}</td>
+
+                  {/* ✅ Profile Picture Cell with preview click */}
+                  <td className="py-2 px-4 border">
+                    {user.profile_pic ? (
+                      <img
+                        src={user.profile_pic}
+                        alt={user.name}
+                        className="w-10 h-10 rounded-full object-cover mx-auto cursor-pointer hover:scale-105 transition-transform"
+                        onClick={() => setPreviewImage(user.profile_pic)}
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mx-auto text-gray-500">
+                        N/A
+                      </div>
+                    )}
+                  </td>
+
                   <td className="py-2 px-4 border">{user.name}</td>
                   <td className="py-2 px-4 border">{user.phone}</td>
                   <td className="py-2 px-4 border">{user.email}</td>
@@ -164,7 +181,7 @@ const handleSaveUser = async (updatedData) => {
               ))
             ) : (
               <tr>
-                <td colSpan="8" className="text-center py-4 text-gray-500">
+                <td colSpan="9" className="text-center py-4 text-gray-500">
                   No users found.
                 </td>
               </tr>
@@ -218,6 +235,28 @@ const handleSaveUser = async (updatedData) => {
           onClose={() => setSelectedUser(null)}
           onSave={handleSaveUser}
         />
+      )}
+
+      {/* ✅ Image Preview Modal */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative">
+            <img
+              src={previewImage}
+              alt="Profile Preview"
+              className="max-w-[90vw] max-h-[80vh] rounded-lg shadow-lg border border-white"
+            />
+            <button
+              className="absolute top-2 right-2 bg-white text-gray-800 px-3 py-1 rounded-full hover:bg-gray-100"
+              onClick={() => setPreviewImage(null)}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
