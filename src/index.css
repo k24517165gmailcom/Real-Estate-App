@@ -8,3 +8,31 @@
   font-family: Outfit;
   
 }
+
+/* === Toastify Brand Styling: Minimal Orange Accent === */
+.Toastify__toast--success {
+  background: #fff !important;
+  color: #333 !important;
+  border-left: 6px solid #ff7a00 !important;
+  box-shadow: 0 2px 8px rgba(255, 122, 0, 0.15) !important;
+}
+
+.Toastify__toast--error {
+  background: #fff !important;
+  color: #e63946 !important;
+  border-left: 6px solid #e63946 !important;
+  box-shadow: 0 2px 8px rgba(230, 57, 70, 0.15) !important;
+}
+
+.Toastify__toast-icon {
+  color: #ff7a00 !important;
+}
+
+.Toastify__progress-bar--success {
+  background: #ff7a00 !important;
+}
+
+.Toastify__progress-bar--error {
+  background: #e63946 !important;
+}
+
