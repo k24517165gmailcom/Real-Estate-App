@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 
-const UserComments = ({ user, onBack }) => {
+const UserComments = ({ user, onBack, onStatusUpdate }) => {
   const [formData, setFormData] = useState({
-    status: "Pending", // ✅ Default
+    status: "Pending",
     followUpDate: "",
     followUpTime: "",
     newComment: "",
@@ -11,13 +11,11 @@ const UserComments = ({ user, onBack }) => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [dateError, setDateError] = useState("");
-  const [isDateValid, setIsDateValid] = useState(false); // ✅ For controlling time input
+  const [isDateValid, setIsDateValid] = useState(false);
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
-  // Fetch comments
   useEffect(() => {
     if (user?.id) {
       fetch(`http://localhost/vayuhu_backend/get_user_comments.php?user_id=${user.id}`)
@@ -29,7 +27,6 @@ const UserComments = ({ user, onBack }) => {
     }
   }, [user]);
 
-  // Handle change
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -51,7 +48,7 @@ const UserComments = ({ user, onBack }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle submit
+  // ✅ Submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -60,10 +57,9 @@ const UserComments = ({ user, onBack }) => {
       return;
     }
 
-    // ✅ Only validate Follow-Up Date/Time when status is "Follow-Up"
     if (formData.status === "Follow-Up") {
       if (!formData.followUpDate || !formData.followUpTime) {
-        alert("Follow-Up Date and Time are required for Follow-Up status");
+        alert("Follow-Up Date and Time are required");
         return;
       }
       if (dateError) {
@@ -99,6 +95,12 @@ const UserComments = ({ user, onBack }) => {
           },
         ]);
 
+        // ✅ Notify parent to refresh user list
+        if (onStatusUpdate) onStatusUpdate();
+
+        // ✅ Optionally go back automatically after submission
+        // onBack();
+
         setFormData({
           status: "Pending",
           followUpDate: "",
@@ -117,7 +119,6 @@ const UserComments = ({ user, onBack }) => {
     }
   };
 
-  // Filter + paginate
   const filteredComments = useMemo(() => {
     return comments.filter(
       (c) =>
@@ -160,10 +161,7 @@ const UserComments = ({ user, onBack }) => {
       </div>
 
       {/* Add Comment Form */}
-      <form
-        onSubmit={handleSubmit}
-        className="border border-orange-300 rounded-lg p-4 mb-6 bg-white shadow-sm"
-      >
+      <form onSubmit={handleSubmit} className="border border-orange-300 rounded-lg p-4 mb-6 bg-white shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           {/* Status Dropdown */}
           <div>
@@ -175,9 +173,7 @@ const UserComments = ({ user, onBack }) => {
               value={formData.status}
               onChange={(e) => {
                 handleChange(e);
-                if (e.target.value !== "Follow-Up") {
-                  setIsDateValid(false);
-                }
+                if (e.target.value !== "Follow-Up") setIsDateValid(false);
               }}
               className="w-full border border-orange-400 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-400"
             >
@@ -188,7 +184,7 @@ const UserComments = ({ user, onBack }) => {
             </select>
           </div>
 
-          {/* Follow-Up Date & Time - Only Show When "Follow-Up" */}
+          {/* Follow-Up Date & Time */}
           {formData.status === "Follow-Up" && (
             <div className="flex gap-3 items-end">
               <div className="flex-1">
@@ -200,15 +196,11 @@ const UserComments = ({ user, onBack }) => {
                   name="followUpDate"
                   value={formData.followUpDate}
                   onChange={handleChange}
-                  className={`w-full border ${
-                    dateError ? "border-red-500" : "border-orange-400"
-                  } rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-400`}
+                  className={`w-full border ${dateError ? "border-red-500" : "border-orange-400"} rounded px-3 py-2`}
                   min={new Date().toISOString().split("T")[0]}
                   required
                 />
-                {dateError && (
-                  <p className="text-red-500 text-xs mt-1">{dateError}</p>
-                )}
+                {dateError && <p className="text-red-500 text-xs mt-1">{dateError}</p>}
               </div>
 
               <div className="flex-1">
@@ -220,8 +212,8 @@ const UserComments = ({ user, onBack }) => {
                   name="followUpTime"
                   value={formData.followUpTime}
                   onChange={handleChange}
-                  className="w-full border border-orange-400 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-400 disabled:opacity-50"
-                  disabled={!isDateValid} // ✅ Disabled until valid date chosen
+                  disabled={!isDateValid}
+                  className="w-full border border-orange-400 rounded px-3 py-2 disabled:opacity-50"
                   min="08:00"
                   max="20:00"
                   required
@@ -246,7 +238,7 @@ const UserComments = ({ user, onBack }) => {
               onChange={handleChange}
               placeholder="Enter your comment"
               rows={3}
-              className="w-full border border-orange-400 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-400 resize-none"
+              className="w-full border border-orange-400 rounded px-3 py-2 resize-none"
               required
             />
           </div>
@@ -276,7 +268,7 @@ const UserComments = ({ user, onBack }) => {
               setSearch(e.target.value);
               setCurrentPage(1);
             }}
-            className="border border-orange-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-orange-400 text-sm"
+            className="border border-orange-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-400"
           />
         </div>
 
@@ -295,7 +287,7 @@ const UserComments = ({ user, onBack }) => {
             <tbody>
               {paginatedComments.length > 0 ? (
                 paginatedComments.map((c, i) => (
-                  <tr key={i} className="border-b last:border-none hover:bg-orange-50/40 transition">
+                  <tr key={i} className="border-b hover:bg-orange-50/40 transition">
                     <td className="px-3 py-2">{(currentPage - 1) * rowsPerPage + i + 1}</td>
                     <td className="px-3 py-2">{c.status}</td>
                     <td className="px-3 py-2">{c.follow_up_date || "-"}</td>
@@ -322,7 +314,7 @@ const UserComments = ({ user, onBack }) => {
             <select
               value={rowsPerPage}
               onChange={handleRowsChange}
-              className="border border-orange-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-400"
+              className="border border-orange-300 rounded px-2 py-1"
             >
               {[5, 10, 20].map((num) => (
                 <option key={num} value={num}>

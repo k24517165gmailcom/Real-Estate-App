@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import UserProfileModal from "./UserProfileModal";
-import UserComments from "./UserComments"; // ✅ Import UserComments
+import UserComments from "./UserComments";
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
@@ -11,13 +11,16 @@ const UserList = () => {
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [selectedUser, setSelectedUser] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
-  const [selectedCommentUser, setSelectedCommentUser] = useState(null); // ✅ New state
+  const [selectedCommentUser, setSelectedCommentUser] = useState(null);
 
-  // Fetch users
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
+  // Map status values to colors
+  const statusColors = {
+    Pending: "text-yellow-600 bg-yellow-100",
+    Ongoing: "text-blue-600 bg-blue-100",
+    Followup: "text-purple-600 bg-purple-100",
+    Closed: "text-green-600 bg-green-100",
+  };
+  // Fetch Users
   const fetchUsers = async () => {
     try {
       const response = await fetch("http://localhost/vayuhu_backend/get_users.php");
@@ -28,6 +31,10 @@ const UserList = () => {
       toast.error("Failed to load users");
     }
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   // Update user details
   const handleSaveUser = async (updatedData) => {
@@ -65,7 +72,7 @@ const UserList = () => {
     }
   };
 
-  // Filter and paginate
+  // Filter + Pagination
   const filteredUsers = users.filter(
     (user) =>
       user.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -78,12 +85,16 @@ const UserList = () => {
   const currentUsers = filteredUsers.slice(indexOfFirst, indexOfLast);
   const totalPages = Math.ceil(filteredUsers.length / entriesPerPage);
 
-  // ✅ Render UserComments if a user is selected for comments
+  // Render comments view if selected
   if (selectedCommentUser) {
     return (
       <UserComments
         user={selectedCommentUser}
-        onBack={() => setSelectedCommentUser(null)}
+        onBack={() => {
+          setSelectedCommentUser(null);
+          fetchUsers();
+        }}
+        onStatusUpdate={fetchUsers}
       />
     );
   }
@@ -166,8 +177,15 @@ const UserList = () => {
                   <td className="py-2 px-4 border">{user.name}</td>
                   <td className="py-2 px-4 border">{user.phone}</td>
                   <td className="py-2 px-4 border">{user.email}</td>
-                  <td className="py-2 px-4 border text-orange-500">
-                    {user.status || "Pending"}
+
+                  {/* Status with color */}
+                  <td className="py-2 px-4 border text-center">
+                    <span
+                      className={`px-2 py-1 rounded-full text-sm font-semibold ${statusColors[user.status] || "text-gray-500 bg-gray-100"
+                        }`}
+                    >
+                      {user.status || "Pending"}
+                    </span>
                   </td>
 
                   {/* Comments */}
@@ -227,9 +245,8 @@ const UserList = () => {
             <button
               key={idx}
               onClick={() => setCurrentPage(idx + 1)}
-              className={`px-3 py-1 border rounded ${
-                currentPage === idx + 1 ? "bg-orange-500 text-white" : ""
-              }`}
+              className={`px-3 py-1 border rounded ${currentPage === idx + 1 ? "bg-orange-500 text-white" : ""
+                }`}
             >
               {idx + 1}
             </button>
