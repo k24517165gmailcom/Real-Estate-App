@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import UserProfileModal from "./UserProfileModal";
+import UserComments from "./UserComments"; // ✅ Import UserComments
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
@@ -9,9 +10,10 @@ const UserList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [previewImage, setPreviewImage] = useState(null); // ✅ For image preview modal
+  const [previewImage, setPreviewImage] = useState(null);
+  const [selectedCommentUser, setSelectedCommentUser] = useState(null); // ✅ New state
 
-  // Fetch users from backend
+  // Fetch users
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -27,7 +29,7 @@ const UserList = () => {
     }
   };
 
-  // Update user details (supports image upload)
+  // Update user details
   const handleSaveUser = async (updatedData) => {
     try {
       const formData = new FormData();
@@ -39,7 +41,6 @@ const UserList = () => {
       formData.append("address", updatedData.address);
       formData.append("password", updatedData.password || "");
 
-      // ✅ Append profilePic only if user selected a new one
       if (updatedData.profilePic) {
         formData.append("profilePic", updatedData.profilePic);
       }
@@ -64,7 +65,7 @@ const UserList = () => {
     }
   };
 
-  // Filtered & paginated users
+  // Filter and paginate
   const filteredUsers = users.filter(
     (user) =>
       user.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -77,11 +78,21 @@ const UserList = () => {
   const currentUsers = filteredUsers.slice(indexOfFirst, indexOfLast);
   const totalPages = Math.ceil(filteredUsers.length / entriesPerPage);
 
+  // ✅ Render UserComments if a user is selected for comments
+  if (selectedCommentUser) {
+    return (
+      <UserComments
+        user={selectedCommentUser}
+        onBack={() => setSelectedCommentUser(null)}
+      />
+    );
+  }
+
   return (
     <div className="p-6 mt-10">
+      {/* Header & Search */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
         <h2 className="text-2xl font-semibold">Users</h2>
-
         <div className="flex flex-wrap items-center gap-3">
           <div>
             <span className="mr-2">Show</span>
@@ -99,7 +110,6 @@ const UserList = () => {
             </select>
             <span className="ml-1">entries</span>
           </div>
-
           <div>
             <input
               type="text"
@@ -118,7 +128,7 @@ const UserList = () => {
           <thead>
             <tr className="bg-orange-50 text-left text-gray-700">
               <th className="py-2 px-4 border">S.No.</th>
-              <th className="py-2 px-4 border">Profile Pic</th> {/* ✅ New column */}
+              <th className="py-2 px-4 border">Profile Pic</th>
               <th className="py-2 px-4 border">Name</th>
               <th className="py-2 px-4 border">Mobile No</th>
               <th className="py-2 px-4 border">Email ID</th>
@@ -137,7 +147,7 @@ const UserList = () => {
                 >
                   <td className="py-2 px-4 border">{indexOfFirst + index + 1}</td>
 
-                  {/* ✅ Profile Picture Cell with preview click */}
+                  {/* Profile Pic */}
                   <td className="py-2 px-4 border">
                     {user.profile_pic ? (
                       <img
@@ -159,11 +169,18 @@ const UserList = () => {
                   <td className="py-2 px-4 border text-orange-500">
                     {user.status || "Pending"}
                   </td>
+
+                  {/* Comments */}
                   <td className="py-2 px-4 border">
-                    <button className="text-orange-500 border border-orange-500 px-3 py-1 rounded hover:bg-orange-50">
+                    <button
+                      className="text-orange-500 border border-orange-500 px-3 py-1 rounded hover:bg-orange-50"
+                      onClick={() => setSelectedCommentUser(user)}
+                    >
                       View
                     </button>
                   </td>
+
+                  {/* Edit */}
                   <td className="py-2 px-4 border">
                     <button
                       className="text-orange-500 border border-orange-500 px-3 py-1 rounded hover:bg-orange-50"
@@ -172,6 +189,8 @@ const UserList = () => {
                       Edit
                     </button>
                   </td>
+
+                  {/* Company */}
                   <td className="py-2 px-4 border">
                     <button className="text-orange-500 border border-orange-500 px-3 py-1 rounded hover:bg-orange-50">
                       View
@@ -196,7 +215,6 @@ const UserList = () => {
           Showing {indexOfFirst + 1} to {Math.min(indexOfLast, filteredUsers.length)} of{" "}
           {filteredUsers.length} entries
         </p>
-
         <div className="flex gap-1">
           <button
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
@@ -205,7 +223,6 @@ const UserList = () => {
           >
             Prev
           </button>
-
           {[...Array(totalPages)].map((_, idx) => (
             <button
               key={idx}
@@ -217,7 +234,6 @@ const UserList = () => {
               {idx + 1}
             </button>
           ))}
-
           <button
             onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
             disabled={currentPage === totalPages}
@@ -237,7 +253,7 @@ const UserList = () => {
         />
       )}
 
-      {/* ✅ Image Preview Modal */}
+      {/* Image Preview Modal */}
       {previewImage && (
         <div
           className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
