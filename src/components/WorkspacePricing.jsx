@@ -6,13 +6,13 @@ import "react-toastify/dist/ReactToastify.css";
 
 // --- GLOBAL DAY MAPPINGS ---
 const DAY_ABBREVIATIONS_MAP = {
-    'Sunday': 'Sun',
-    'Monday': 'Mon',
-    'Tuesday': 'Tue',
-    'Wednesday': 'Wed',
-    'Thursday': 'Thu',
-    'Friday': 'Fri',
-    'Saturday': 'Sat'
+    Sunday: "Sun",
+    Monday: "Mon",
+    Tuesday: "Tue",
+    Wednesday: "Wed",
+    Thursday: "Thu",
+    Friday: "Fri",
+    Saturday: "Sat",
 };
 // ---------------------------
 
@@ -22,8 +22,8 @@ const generateTimeOptions = () => {
     for (let i = 8; i <= 20; i++) {
         const hour = i % 12 === 0 ? 12 : i % 12;
         const ampm = i < 12 || i === 24 ? "AM" : "PM";
-        const timeValue = `${i.toString().padStart(2, '0')}:00`;
-        const display = `${hour.toString().padStart(2, '0')}:00 ${ampm}`;
+        const timeValue = `${i.toString().padStart(2, "0")}:00`;
+        const display = `${hour.toString().padStart(2, "0")}:00 ${ampm}`;
         times.push({ value: timeValue, display: display });
     }
     return times;
@@ -31,81 +31,128 @@ const generateTimeOptions = () => {
 
 const TIME_OPTIONS = generateTimeOptions();
 
-// Correctly formats 24-hour time to 12-hour AM/PM display
 const format24HourTo12Hour = (time24) => {
-    if (!time24) return '';
+    if (!time24) return "";
     try {
-        const [hours24, minutes] = time24.split(':');
+        const [hours24, minutes] = time24.split(":");
         let hours = parseInt(hours24, 10);
-        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const ampm = hours >= 12 ? "PM" : "AM";
 
         hours = hours % 12;
-        hours = hours ? hours : 12; // the hour '0' should be '12'
+        hours = hours ? hours : 12;
 
-        return `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
-    } catch (error) {
-        console.error("Time formatting error:", error);
+        return `${hours.toString().padStart(2, "0")}:${minutes} ${ampm}`;
+    } catch {
         return time24;
     }
-}
+};
 
-// Returns the chronological list of working days (Mon-Sat) for the Monthly plan, using abbreviations.
+// Returns chronological list of working days (Mon–Sat)
 const getDaysOfWeekInDateRange = (start, end) => {
     const startObj = new Date(start);
     const endObj = new Date(end);
 
-    if (!start || !end || startObj > endObj) return '';
+    if (!start || !end || startObj > endObj) return "";
 
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const standardWorkingOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayNames = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+    ];
+    const standardWorkingOrder = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+    ];
 
-    // 1. Identify all unique working days present in the range
     const daysFoundIndices = new Set();
     let current = new Date(startObj);
     while (current <= endObj) {
         const dayIndex = current.getDay();
-        if (dayIndex !== 0) { // 0 is Sunday. Only track working days.
-            daysFoundIndices.add(dayIndex);
-        }
+        if (dayIndex !== 0) daysFoundIndices.add(dayIndex);
         current.setDate(current.getDate() + 1);
     }
 
-    if (daysFoundIndices.size === 0) return '';
+    if (daysFoundIndices.size === 0) return "";
 
-    // 2. Filter the standard order based on the days found
-    const presentWorkingDays = standardWorkingOrder.filter(day => daysFoundIndices.has(dayNames.indexOf(day)));
+    const presentWorkingDays = standardWorkingOrder.filter((day) =>
+        daysFoundIndices.has(dayNames.indexOf(day))
+    );
 
-    // 3. Rotate the list to start with the start date's day
     const startDayName = dayNames[startObj.getDay()];
     const startIndex = presentWorkingDays.indexOf(startDayName);
 
-    let rotatedDays = [];
-    if (startIndex !== -1) {
-        rotatedDays = presentWorkingDays.slice(startIndex).concat(presentWorkingDays.slice(0, startIndex));
-    } else {
-        rotatedDays = presentWorkingDays;
-    }
+    const rotated =
+        startIndex !== -1
+            ? presentWorkingDays
+                .slice(startIndex)
+                .concat(presentWorkingDays.slice(0, startIndex))
+            : presentWorkingDays;
 
-    // 4. Map the full day names to abbreviations before joining
-    const abbreviatedDays = rotatedDays.map(day => DAY_ABBREVIATIONS_MAP[day]);
+    return rotated.map((d) => DAY_ABBREVIATIONS_MAP[d]).join(", ");
+};
 
-    return abbreviatedDays.join(', ');
-}
-
-
-// Returns the abbreviated day name for single-day display.
+// Single day abbreviation
 const getDayAbbreviation = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+    if (!dateString) return "";
+    const dayName = new Date(dateString).toLocaleDateString("en-US", {
+        weekday: "long",
+    });
     return DAY_ABBREVIATIONS_MAP[dayName] || dayName;
-}
+};
+
 
 const WorkspacePricing = () => {
     const location = useLocation();
     const selectedPlan = location.state?.plan;
 
-    // State Variables
+    // 🔥 NEW — Workspaces from backend
+    const [workspaces, setWorkspaces] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    // ---- Fetch workspace list ----
+    useEffect(() => {
+        fetch("http://localhost/vayuhu_backend/get_spaces.php")
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success) {
+                    const formatted = data.spaces.map((i) => ({
+                        id: i.id,
+                        title: i.space,
+                        desc: i.min_duration_desc || "",
+                        type: i.space_code,
+                        capacity: 10, // default unless DB adds field
+                        monthly: Number(i.per_month) || null,
+                        daily: Number(i.per_day) || null,
+                        hourly: Number(i.per_hour) || null,
+                        image: i.image_url,
+                        raw: i,
+                    }));
+
+                    setWorkspaces(formatted);
+                } else {
+                    setError("No spaces found");
+                }
+                setLoading(false);
+            })
+            .catch((err) => {
+                console.error(err);
+                setError("Failed to load workspace data");
+                setLoading(false);
+            });
+    }, []);
+
+    // ---------------------------
+    // STATE VARIABLES
+    // ---------------------------
     const [modalData, setModalData] = useState(null);
     const [step, setStep] = useState(1);
     const [startDate, setStartDate] = useState("");
@@ -120,157 +167,74 @@ const WorkspacePricing = () => {
     const [totalHours, setTotalHours] = useState(1);
     const [numAttendees, setNumAttendees] = useState(1);
 
-    const workspaces = [
-        {
-            id: "Individual-Working-Space",
-            title: "Individual Working Space",
-            desc: "Your private nook in the shared space.",
-            type: "Desk",
-            capacity: 45,
-            monthly: 4000,
-            daily: 500,
-            hourly: 100,
-            image: "workspaces-1.jpg",
-        },
-        {
-            id: "Team-Leads-Cubicle",
-            title: "Team Leads Cubicle",
-            desc: "Lead with focus, drive success.",
-            type: "Cubicle",
-            capacity: 4,
-            monthly: 4500,
-            daily: 600,
-            hourly: 120,
-            image: "workspaces4.jpg",
-        },
-        {
-            id: "Manager-Cubicle",
-            title: "Manager Cubicle",
-            desc: "Leadership Space, Your Way.",
-            type: "Cubicle",
-            capacity: 2,
-            monthly: 6000,
-            daily: 750,
-            hourly: 120,
-            image: "workspaces2.jpg",
-        },
-        {
-            id: "Video-Conferencing",
-            title: "Video Conferencing",
-            desc: "Connect virtually, collaborate seamlessly.",
-            type: "Conference Room",
-            capacity: 8,
-            hourly: 100,
-            image: "workspaces3.jpg",
-        },
-        {
-            id: "Executive-Cabin",
-            title: "Executive Cabin",
-            desc: "Elite Space for Strategic Leadership.",
-            type: "Cabin",
-            capacity: 2,
-            monthly: 15000,
-            daily: 1000,
-            hourly: 200,
-            image: "workspaces5.jpg",
-        },
-        {
-            id: "CEO-Cabin",
-            title: "CEO Cabin",
-            desc: "Where Visionaries Lead and Inspire.",
-            type: "Cabin",
-            capacity: 1,
-            monthly: 50000,
-            daily: 4000,
-            hourly: 500,
-            image: "workspaces6.jpg",
-        },
-    ];
-
-    // --- EFFECT HOOKS ---
-    useEffect(() => { /* ... scroll to selected plan ... */ }, [selectedPlan]);
-
-    // FIXED: Set default end date on start date change (handles month length correctly)
+    // ---- Auto-set end date based on start date ----
     useEffect(() => {
         if (!startDate || !modalData?.planType) return;
         const start = new Date(startDate);
         let end = new Date(start);
 
         if (modalData.planType === "Monthly") {
-            // Recalculate end date based *only* on the current startDate
             end.setMonth(start.getMonth() + 1);
             end.setDate(end.getDate() - 1);
-            setEndDate(end.toISOString().split("T")[0]);
-        } else if (modalData.planType === "Daily" || modalData.planType === "Hourly") {
+        } else {
             end = new Date(start);
-            setEndDate(end.toISOString().split("T")[0]);
         }
 
+        setEndDate(end.toISOString().split("T")[0]);
     }, [startDate, modalData?.planType]);
 
-    useEffect(() => { /* ... dynamic day calculation ... */
+    // ---- Calculate Days ----
+    useEffect(() => {
         if (startDate && endDate) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            if (end < start) {
-                setDays(0);
-                return;
-            }
-            const timeDiff = end.getTime() - start.getTime();
-            const dayDiff = timeDiff / (1000 * 60 * 60 * 24);
-            const calculatedDays = Math.round(dayDiff) + 1;
-            setDays(calculatedDays > 0 ? calculatedDays : 1);
-        } else {
-            setDays(0);
+            const s = new Date(startDate);
+            const e = new Date(endDate);
+            if (e < s) return setDays(0);
+
+            const diff = e - s;
+            const d = Math.round(diff / (1000 * 60 * 60 * 24)) + 1;
+            setDays(d);
         }
     }, [startDate, endDate]);
 
-    useEffect(() => { /* ... calculate total hours ... */
+    // ---- Calculate Total Hours ----
+    useEffect(() => {
         if (modalData?.planType === "Hourly" && startTime && endTime) {
-            const startHour = parseInt(startTime.split(':')[0]);
-            const endHour = parseInt(endTime.split(':')[0]);
-            let calculatedHours = endHour - startHour;
-            setTotalHours(calculatedHours > 0 ? calculatedHours : 1);
-        } else {
-            setTotalHours(1);
+            const sh = parseInt(startTime.split(":")[0]);
+            const eh = parseInt(endTime.split(":")[0]);
+            setTotalHours(eh - sh > 0 ? eh - sh : 1);
         }
     }, [startTime, endTime, modalData?.planType]);
 
-    // Apply coupon (remains the same)
+    // ---- Coupons ----
     const handleApplyCoupon = () => {
         if (coupon.trim().toLowerCase() === "vayuhu10") {
             setDiscount(10);
             toast.success("Coupon applied! You got ₹10 off!");
-            setCoupon("");
         } else {
             toast.error("Invalid coupon code");
-            setCoupon("");
         }
+        setCoupon("");
     };
 
-    // CALCULATE BASE AMOUNT (Remains the same)
+    // ---- Calculation ----
     const calculateBaseAmount = () => {
-        const basePrice = modalData?.price || 0;
-        let baseAmount = 0;
-        if (modalData?.planType === "Daily") {
-            baseAmount = basePrice * days;
-        } else if (modalData?.planType === "Monthly") {
-            baseAmount = basePrice;
-        } else if (modalData?.planType === "Hourly") {
-            const isPerPersonRate = modalData.title === "Video Conferencing";
-            if (isPerPersonRate) {
-                baseAmount = basePrice * numAttendees * totalHours * days;
-            } else {
-                baseAmount = basePrice * totalHours * days;
-            }
+        const price = modalData?.price || 0;
+
+        if (modalData?.planType === "Daily") return price * days;
+
+        if (modalData?.planType === "Monthly") return price;
+
+        if (modalData?.planType === "Hourly") {
+            return price * totalHours * days * numAttendees;
         }
-        return baseAmount;
-    }
+
+        return 0;
+    };
 
     const calculateTotal = () => {
-        const finalBaseAmount = calculateBaseAmount();
-        const gst = finalBaseAmount * 0.18;
-        return finalBaseAmount + gst - discount;
+        const base = calculateBaseAmount();
+        const gst = base * 0.18;
+        return base + gst - discount;
     };
 
     const resetState = () => {
@@ -289,18 +253,17 @@ const WorkspacePricing = () => {
         setNumAttendees(1);
     };
 
-    // Derived values for display
     const displayAmount = calculateBaseAmount();
     const displayGst = (displayAmount * 0.18).toFixed(0);
-    const totalPreDiscount = (displayAmount + parseFloat(displayGst)).toFixed(0);
+    const totalPreDiscount = (displayAmount + Number(displayGst)).toFixed(0);
     const finalTotal = calculateTotal().toFixed(0);
+
 
 
     return (
         <section id="WorkSpaces" className="container mx-auto px-6 md:px-20 lg:px-32 py-20">
             <ToastContainer position="top-center" autoClose={2000} />
 
-            {/* ... (Header and Workspace Cards JSX remain the same) ... */}
             <div className="text-center mb-12">
                 <h6 className="uppercase text-orange-500 tracking-widest font-medium">Pricing</h6>
                 <h2 className="text-3xl sm:text-5xl font-bold text-gray-800 mt-2">Workspace Plans</h2>
@@ -310,71 +273,85 @@ const WorkspacePricing = () => {
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
-                {workspaces.map((item) => (
-                    <motion.div
-                        key={item.id}
-                        id={item.id}
-                        whileHover={{ scale: 1.03 }}
-                        transition={{ type: "spring", stiffness: 200 }}
-                        className="relative rounded-2xl overflow-hidden shadow-lg border border-gray-200"
-                    >
-                        <img src={item.image} alt={item.title} className="w-full h-64 object-cover" />
-                        <div className="p-6 bg-white">
-                            <h3 className="text-xl font-semibold text-gray-800 mb-2">{item.title}</h3>
-                            <p className="text-gray-600 mb-2">{item.desc}</p>
-                            <p className="text-sm text-gray-500 mb-2">Type: {item.type}</p>
-                            <p className="text-sm text-gray-500 mb-2">
-                                Capacity: {item.capacity} person{item.capacity > 1 ? "s" : ""}
-                            </p>
+            {/* Loading / Error */}
+            {loading && (
+                <div className="text-center py-10 text-gray-500 text-lg">
+                    Loading workspaces...
+                </div>
+            )}
+            {error && (
+                <div className="text-center py-10 text-red-500 text-lg">
+                    {error}
+                </div>
+            )}
 
-                            {/* Pricing Buttons */}
-                            {["monthly", "daily", "hourly"].map(
-                                (type) =>
-                                    item[type] && (
-                                        <button
-                                            key={type}
-                                            onClick={() => {
-                                                setModalData({
-                                                    ...item,
-                                                    planType: type.charAt(0).toUpperCase() + type.slice(1),
-                                                    price: item[type],
-                                                });
-                                                setStartDate(new Date().toISOString().split("T")[0]);
-                                                setEndDate("");
-                                                setStep(1);
-                                                // Default times
-                                                if (type === "hourly") {
-                                                    const now = new Date();
+            {/* Workspace Grid */}
+            {!loading && !error && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+                    {workspaces.map((item) => (
+                        <motion.div
+                            key={item.id}
+                            id={item.id}
+                            whileHover={{ scale: 1.03 }}
+                            transition={{ type: "spring", stiffness: 200 }}
+                            className="relative rounded-2xl overflow-hidden shadow-lg border border-gray-200"
+                        >
+                            <img src={item.image} alt={item.title} className="w-full h-64 object-cover" />
+                            <div className="p-6 bg-white">
+                                <h3 className="text-xl font-semibold text-gray-800 mb-2">{item.title}</h3>
+                                <p className="text-gray-600 mb-2">{item.desc}</p>
+                                <p className="text-sm text-gray-500 mb-2">Type: {item.type}</p>
+                                <p className="text-sm text-gray-500 mb-2">
+                                    Capacity: {item.capacity} persons
+                                </p>
 
-                                                    // Round current time up to next full hour
-                                                    now.setHours(now.getHours() + (now.getMinutes() > 0 ? 1 : 0), 0, 0, 0);
+                                {["monthly", "daily", "hourly"].map(
+                                    (type) =>
+                                        item[type] && (
+                                            <button
+                                                key={type}
+                                                onClick={() => {
+                                                    setModalData({
+                                                        ...item,
+                                                        planType: type.charAt(0).toUpperCase() + type.slice(1),
+                                                        price: item[type],
+                                                    });
 
-                                                    const hours24 = now.getHours();
-                                                    const startValue = `${hours24.toString().padStart(2, '0')}:00`;
-                                                    const endHours = Math.min(20, hours24 + 1); // cap at 8 PM
-                                                    const endValue = `${endHours.toString().padStart(2, '0')}:00`;
+                                                    setStartDate(new Date().toISOString().split("T")[0]);
+                                                    setEndDate("");
+                                                    setStep(1);
 
-                                                    setStartTime(startValue);
-                                                    setEndTime(endValue);
-                                                } else {
-                                                    setStartTime("08:00");
-                                                    setEndTime("20:00");
-                                                }
+                                                    if (type === "hourly") {
+                                                        const now = new Date();
+                                                        now.setHours(
+                                                            now.getHours() + (now.getMinutes() > 0 ? 1 : 0),
+                                                            0,
+                                                            0,
+                                                            0
+                                                        );
+                                                        const h = now.getHours();
+                                                        setStartTime(`${h.toString().padStart(2, "0")}:00`);
+                                                        setEndTime(
+                                                            `${Math.min(20, h + 1).toString().padStart(2, "0")}:00`
+                                                        );
+                                                    } else {
+                                                        setStartTime("08:00");
+                                                        setEndTime("20:00");
+                                                    }
 
-
-                                                setNumAttendees(1);
-                                            }}
-                                            className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium mr-2 mb-2 hover:bg-orange-600 transition"
-                                        >
-                                            {type.charAt(0).toUpperCase() + type.slice(1)} ₹{item[type]}
-                                        </button>
-                                    )
-                            )}
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
+                                                    setNumAttendees(1);
+                                                }}
+                                                className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium mr-2 mb-2 hover:bg-orange-600 transition"
+                                            >
+                                                {type.charAt(0).toUpperCase() + type.slice(1)} ₹{item[type]}
+                                            </button>
+                                        )
+                                )}
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
 
 
             <AnimatePresence>
