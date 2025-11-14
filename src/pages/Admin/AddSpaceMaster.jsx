@@ -1,9 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// ✅ Get API URL from Vite environment variable
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
 
 const AddSpaceMaster = () => {
@@ -29,15 +28,21 @@ const AddSpaceMaster = () => {
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
 
-  // ✅ Handle text inputs
+  // -------------------------
+  // Simplified Positive Number Check
+  // -------------------------
+  const isPositiveNumber = (val) => val !== "" && !isNaN(val) && Number(val) >= 0;
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ✅ Handle image input
+  // -------------------------
+  // Improved Image Handling + Memory Optimization
+  // -------------------------
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
@@ -45,16 +50,20 @@ const AddSpaceMaster = () => {
       return;
     }
 
+    // Revoke old object URL to save memory (CPU optimization)
+    if (preview) URL.revokeObjectURL(preview);
+
+    const newPreviewURL = URL.createObjectURL(file);
     setImage(file);
-    setPreview(URL.createObjectURL(file));
+    setPreview(newPreviewURL);
   };
 
-  // ✅ Helpers
-  const isPositiveNumber = (val) => {
-    if (val === "" || val === null) return false;
-    const num = Number(val);
-    return !Number.isNaN(num) && num >= 0;
-  };
+  // Cleanup object URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
 
   const fieldLabel = (key) => {
     const map = {
@@ -72,22 +81,18 @@ const AddSpaceMaster = () => {
     return map[key] || key;
   };
 
-  // ✅ Validation
+  // -------------------------
+  // Validation
+  // -------------------------
   const validate = () => {
-    if (!form.space_code.trim()) {
-      toast.error("Space Code is required");
-      return false;
-    }
-    if (!form.space.trim()) {
-      toast.error("Space name is required");
-      return false;
-    }
+    if (!form.space_code.trim()) return toast.error("Space Code is required");
+    if (!form.space.trim()) return toast.error("Space name is required");
 
     const hasAnyRate =
       form.per_hour !== "" || form.per_day !== "" || form.per_month !== "";
+
     if (!hasAnyRate) {
-      toast.error("Please supply at least one rate (Per Hour / Per Day / Per Month).");
-      return false;
+      return toast.error("Please supply at least one rate (Hour/Day/Month).");
     }
 
     const numericFields = [
@@ -104,46 +109,21 @@ const AddSpaceMaster = () => {
     for (const key of numericFields) {
       const val = form[key];
       if (val !== "" && !isPositiveNumber(val)) {
-        toast.error(`${fieldLabel(key)} must be a valid non-negative number`);
-        return false;
+        return toast.error(`${fieldLabel(key)} must be a valid non-negative number`);
       }
     }
 
-    if (form.min_duration !== "" && form.max_duration !== "") {
+    if (form.min_duration && form.max_duration) {
       if (Number(form.min_duration) > Number(form.max_duration)) {
-        toast.error("Min Duration cannot be greater than Max Duration");
-        return false;
+        return toast.error("Min Duration cannot be greater than Max Duration");
       }
     }
 
-    if (!image) {
-      toast.error("Please upload a space image");
-      return false;
-    }
+    if (!image) return toast.error("Please upload a space image");
 
     return true;
   };
 
-  // ✅ Field definitions
-  const rateFields = [
-    { name: "per_hour", label: "Per Hour" },
-    { name: "per_day", label: "Per Day" },
-    { name: "per_month", label: "Per Month" },
-  ];
-
-  const weekFields = [
-    { name: "one_week", label: "One Week" },
-    { name: "two_weeks", label: "Two Weeks" },
-    { name: "three_weeks", label: "Three Weeks" },
-  ];
-
-  const durationFields = [
-    { name: "min_duration", label: "Min Duration", inputMode: "numeric" },
-    { name: "min_duration_desc", label: "Min Duration Description" },
-    { name: "max_duration", label: "Max Duration", inputMode: "numeric" },
-  ];
-
-  // ✅ Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
@@ -151,9 +131,7 @@ const AddSpaceMaster = () => {
     setLoading(true);
     try {
       const payload = new FormData();
-      Object.entries(form).forEach(([k, v]) =>
-        payload.append(k, v === null || v === undefined ? "" : v)
-      );
+      Object.entries(form).forEach(([k, v]) => payload.append(k, v || ""));
       payload.append("image", image);
 
       const res = await fetch(`${API_URL}/add_space.php`, {
@@ -161,7 +139,6 @@ const AddSpaceMaster = () => {
         body: payload,
       });
 
-      // ✅ Handle invalid/non-JSON responses
       let data;
       try {
         data = await res.json();
@@ -169,21 +146,20 @@ const AddSpaceMaster = () => {
         throw new Error("Invalid or unexpected server response");
       }
 
-      if (res.ok && data?.success) {
+      if (res.ok && data.success) {
         toast.success("Space added successfully!");
-        setTimeout(() => navigate("/admin/space-master-list"), 700);
+        setTimeout(() => navigate("/admin/space-master-list"), 600);
       } else {
         toast.error(data?.message || "Failed to add space");
       }
     } catch (err) {
-      console.error("Add space error:", err);
-      toast.error(err.message || "Something went wrong while adding space");
+      toast.error(err.message || "Error adding space");
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Render
+  // Render UI -------------------------------------
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -196,14 +172,11 @@ const AddSpaceMaster = () => {
         </button>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white shadow-sm rounded-lg p-6 border border-orange-100"
-      >
+      {/* --- FORM START --- */}
+      <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* LEFT COLUMN */}
+          {/* LEFT SECTION */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Space Code */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Space Code <span className="text-red-500">*</span>
@@ -212,12 +185,11 @@ const AddSpaceMaster = () => {
                 name="space_code"
                 value={form.space_code}
                 onChange={handleChange}
-                placeholder="Enter Space Code.."
-                className="w-full border border-orange-400 rounded px-3 py-2 focus:outline-none"
+                className="w-full border border-orange-400 rounded px-3 py-2"
+                placeholder="Enter Space Code..."
               />
             </div>
 
-            {/* Space */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Space <span className="text-red-500">*</span>
@@ -226,21 +198,22 @@ const AddSpaceMaster = () => {
                 name="space"
                 value={form.space}
                 onChange={handleChange}
-                placeholder="Enter Space.."
-                className="w-full border border-orange-400 rounded px-3 py-2 focus:outline-none"
+                className="w-full border border-orange-400 rounded px-3 py-2"
+                placeholder="Enter Space..."
               />
             </div>
 
             {/* Rates */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {rateFields.map(({ name, label }) => (
-                <div key={name}>
-                  <label className="block text-sm text-gray-700 mb-1">{label}</label>
+              {["per_hour", "per_day", "per_month"].map((f) => (
+                <div key={f}>
+                  <label className="block text-sm text-gray-700 mb-1">
+                    {fieldLabel(f)}
+                  </label>
                   <input
-                    name={name}
-                    value={form[name]}
+                    name={f}
+                    value={form[f]}
                     onChange={handleChange}
-                    placeholder={`${label} Rate..`}
                     inputMode="numeric"
                     className="w-full border border-orange-400 rounded px-3 py-2"
                   />
@@ -248,16 +221,17 @@ const AddSpaceMaster = () => {
               ))}
             </div>
 
-            {/* Multi-week rates */}
+            {/* Weekly Rates */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {weekFields.map(({ name, label }) => (
-                <div key={name}>
-                  <label className="block text-sm text-gray-700 mb-1">{label}</label>
+              {["one_week", "two_weeks", "three_weeks"].map((f) => (
+                <div key={f}>
+                  <label className="block text-sm text-gray-700 mb-1">
+                    {fieldLabel(f)}
+                  </label>
                   <input
-                    name={name}
-                    value={form[name]}
+                    name={f}
+                    value={form[f]}
                     onChange={handleChange}
-                    placeholder={`${label} Rate..`}
                     inputMode="numeric"
                     className="w-full border border-orange-400 rounded px-3 py-2"
                   />
@@ -265,24 +239,24 @@ const AddSpaceMaster = () => {
               ))}
             </div>
 
-            {/* Durations */}
+            {/* Duration */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {durationFields.map(({ name, label, inputMode }) => (
-                <div key={name}>
-                  <label className="block text-sm text-gray-700 mb-1">{label}</label>
+              {["min_duration", "min_duration_desc", "max_duration"].map((f) => (
+                <div key={f}>
+                  <label className="block text-sm text-gray-700 mb-1">
+                    {fieldLabel(f)}
+                  </label>
                   <input
-                    name={name}
-                    value={form[name]}
+                    name={f}
+                    value={form[f]}
                     onChange={handleChange}
-                    placeholder={`${label}..`}
-                    inputMode={inputMode}
+                    inputMode={f.includes("duration") ? "numeric" : "text"}
                     className="w-full border border-orange-400 rounded px-3 py-2"
                   />
                 </div>
               ))}
             </div>
 
-            {/* Max Duration Description */}
             <div>
               <label className="block text-sm text-gray-700 mb-1">
                 Max Duration Description
@@ -291,12 +265,10 @@ const AddSpaceMaster = () => {
                 name="max_duration_desc"
                 value={form.max_duration_desc}
                 onChange={handleChange}
-                placeholder="Max Duration Description.."
                 className="w-full border border-orange-400 rounded px-3 py-2"
               />
             </div>
 
-            {/* Image Upload */}
             <div>
               <label className="block text-sm text-gray-700 mb-1">
                 Space Image <span className="text-red-500">*</span>
@@ -312,7 +284,6 @@ const AddSpaceMaster = () => {
 
           {/* RIGHT COLUMN */}
           <div className="space-y-6 flex flex-col items-center">
-            {/* Image Preview */}
             <div className="w-full flex justify-center mt-2">
               <div className="p-2 border border-orange-300 rounded-lg bg-orange-50 shadow-sm">
                 {preview ? (
@@ -329,7 +300,6 @@ const AddSpaceMaster = () => {
               </div>
             </div>
 
-            {/* Status */}
             <div className="w-full">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Status
@@ -345,7 +315,6 @@ const AddSpaceMaster = () => {
               </select>
             </div>
 
-            {/* Submit */}
             <div className="pt-4 w-full">
               <button
                 type="submit"
@@ -358,6 +327,7 @@ const AddSpaceMaster = () => {
           </div>
         </div>
       </form>
+      {/* --- FORM END --- */}
     </div>
   );
 };
