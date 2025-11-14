@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import EditSpaceMasterModal from "./EditSpaceMasterModal"; // ✅ Update path as needed
 
 const API_URL = "http://localhost/vayuhu_backend";
 
@@ -10,6 +11,8 @@ const SpaceMasterList = () => {
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [previewImage, setPreviewImage] = useState(null);
   const [selectedSpace, setSelectedSpace] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
 
   // Status color mapping
   const statusColors = {
@@ -44,6 +47,39 @@ const SpaceMasterList = () => {
       space.space.toLowerCase().includes(search.toLowerCase()) ||
       space.space_code.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleUpdateSpace = async (data) => {
+    const formData = new FormData();
+
+    Object.keys(data).forEach((key) => {
+      if (data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+
+    // Include ID
+    formData.append("id", selectedSpace.id);
+
+    try {
+      const res = await fetch(`${API_URL}/update_space.php`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        toast.success("Updated successfully!");
+        fetchSpaces(); // reload list
+        setShowEditModal(false);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (err) {
+      toast.error("Network error!");
+    }
+  };
+
 
   const indexOfLast = currentPage * entriesPerPage;
   const indexOfFirst = indexOfLast - entriesPerPage;
@@ -109,7 +145,6 @@ const SpaceMasterList = () => {
             </tr>
           </thead>
 
-
           <tbody>
             {currentSpaces.length > 0 ? (
               currentSpaces.map((item, index) => (
@@ -153,7 +188,6 @@ const SpaceMasterList = () => {
                     {item.max_duration_desc || "-"}
                   </td>
 
-
                   {/* Status */}
                   <td className="py-2 px-4 border">
                     <span
@@ -168,19 +202,20 @@ const SpaceMasterList = () => {
                   <td className="py-2 px-4 border">
                     <button
                       className="text-orange-500 border border-orange-500 px-3 py-1 rounded hover:bg-orange-50"
-                      onClick={() => setSelectedSpace(item)}
+                      onClick={() => {
+                        setSelectedSpace(item);
+                        setShowEditModal(true);
+                      }}
                     >
                       Edit
                     </button>
+
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td
-                  colSpan="9"
-                  className="text-center py-4 text-gray-500"
-                >
+                <td colSpan="15" className="text-center py-4 text-gray-500">
                   No spaces found.
                 </td>
               </tr>
@@ -199,9 +234,7 @@ const SpaceMasterList = () => {
 
         <div className="flex gap-1">
           <button
-            onClick={() =>
-              setCurrentPage((prev) => Math.max(prev - 1, 1))
-            }
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
             className="px-3 py-1 border rounded disabled:opacity-50"
           >
@@ -212,9 +245,7 @@ const SpaceMasterList = () => {
             <button
               key={idx}
               onClick={() => setCurrentPage(idx + 1)}
-              className={`px-3 py-1 border rounded ${currentPage === idx + 1
-                ? "bg-orange-500 text-white"
-                : ""
+              className={`px-3 py-1 border rounded ${currentPage === idx + 1 ? "bg-orange-500 text-white" : ""
                 }`}
             >
               {idx + 1}
@@ -255,23 +286,16 @@ const SpaceMasterList = () => {
         </div>
       )}
 
-      {/* Edit Modal Placeholder */}
-      {selectedSpace && (
-        <div className="p-4">
-          {/* Replace with EditSpaceMasterModal */}
-          <div className="bg-white shadow p-4 rounded">
-            <h3 className="text-xl font-semibold mb-2">
-              Edit feature coming soon...
-            </h3>
-            <button
-              className="bg-orange-500 text-white px-4 py-2 rounded"
-              onClick={() => setSelectedSpace(null)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
+      {/* ✅ Real Edit Modal */}
+      {showEditModal && (
+        <EditSpaceMasterModal
+          space={selectedSpace}
+          onClose={() => setShowEditModal(false)}
+          onSave={handleUpdateSpace}
+        />
       )}
+
+
     </div>
   );
 };
