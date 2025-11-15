@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import BlogEditModal from "./BlogEditModal";
 
 const API_URL = "http://localhost/vayuhu_backend";
 
@@ -9,6 +10,7 @@ const BlogList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [previewImage, setPreviewImage] = useState(null);
+  const [selectedBlog, setSelectedBlog] = useState(null);
 
   // Fetch Blog List
   const fetchBlogs = async () => {
@@ -40,6 +42,38 @@ const BlogList = () => {
   const indexOfFirst = indexOfLast - entriesPerPage;
   const currentBlogs = filteredBlogs.slice(indexOfFirst, indexOfLast);
   const totalPages = Math.ceil(filteredBlogs.length / entriesPerPage);
+
+  // Handle save from modal
+  const handleSaveBlog = async (updatedData) => {
+    try {
+      const payload = new FormData();
+      payload.append("id", selectedBlog.id);
+      payload.append("blog_heading", updatedData.blog_heading);
+      payload.append("blog_description", updatedData.blog_description);
+      payload.append("status", updatedData.status);
+      if (updatedData.blog_image) {
+        payload.append("blog_image", updatedData.blog_image);
+      }
+
+      const res = await fetch(`${API_URL}/update_blog.php`, {
+        method: "POST",
+        body: payload,
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Blog updated successfully!");
+        fetchBlogs();
+        setSelectedBlog(null);
+      } else {
+        toast.error(data.message || "Failed to update blog");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong!");
+    }
+  };
 
   return (
     <div className="p-6 mt-10">
@@ -85,6 +119,7 @@ const BlogList = () => {
               <th className="py-2 px-4 border">Heading</th>
               <th className="py-2 px-4 border">Status</th>
               <th className="py-2 px-4 border">Created At</th>
+              <th className="py-2 px-4 border">Actions</th>
             </tr>
           </thead>
 
@@ -119,19 +154,35 @@ const BlogList = () => {
 
                   <td className="py-2 px-4 border">{item.blog_heading}</td>
 
-                  {/* Status (static: Active) */}
+                  {/* Status */}
                   <td className="py-2 px-4 border">
-                    <span className="px-2 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-600">
-                      Active
+                    <span
+                      className={`px-2 py-1 rounded-full text-sm font-semibold ${
+                        item.status === "active"
+                          ? "bg-green-100 text-green-600"
+                          : "bg-red-100 text-red-600"
+                      }`}
+                    >
+                      {item.status}
                     </span>
                   </td>
 
                   <td className="py-2 px-4 border">{item.created_at}</td>
+
+                  {/* Actions */}
+                  <td className="py-2 px-4 border">
+                    <button
+                      className="text-orange-500 border border-orange-500 px-3 py-1 rounded hover:bg-orange-50"
+                      onClick={() => setSelectedBlog(item)}
+                    >
+                      Edit
+                    </button>
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="5" className="text-center py-4 text-gray-500">
+                <td colSpan="6" className="text-center py-4 text-gray-500">
                   No blogs found.
                 </td>
               </tr>
@@ -201,6 +252,15 @@ const BlogList = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Blog Edit Modal */}
+      {selectedBlog && (
+        <BlogEditModal
+          blog={selectedBlog}
+          onClose={() => setSelectedBlog(null)}
+          onSave={handleSaveBlog}
+        />
       )}
     </div>
   );
