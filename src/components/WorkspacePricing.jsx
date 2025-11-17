@@ -1,8 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom"; // ✅ Added useNavigate
 import { motion, AnimatePresence } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
+// ⭐ ADDED — function to extract user_id from localStorage
+const getUserId = () => {
+    try {
+        const user = JSON.parse(localStorage.getItem("user"));
+        return user?.id || null;
+    } catch {
+        return null;
+    }
+};
+
 
 // --- GLOBAL DAY MAPPINGS ---
 const DAY_ABBREVIATIONS_MAP = {
@@ -37,10 +48,8 @@ const format24HourTo12Hour = (time24) => {
         const [hours24, minutes] = time24.split(":");
         let hours = parseInt(hours24, 10);
         const ampm = hours >= 12 ? "PM" : "AM";
-
         hours = hours % 12;
         hours = hours ? hours : 12;
-
         return `${hours.toString().padStart(2, "0")}:${minutes} ${ampm}`;
     } catch {
         return time24;
@@ -51,9 +60,7 @@ const format24HourTo12Hour = (time24) => {
 const getDaysOfWeekInDateRange = (start, end) => {
     const startObj = new Date(start);
     const endObj = new Date(end);
-
     if (!start || !end || startObj > endObj) return "";
-
     const dayNames = [
         "Sunday",
         "Monday",
@@ -71,7 +78,6 @@ const getDaysOfWeekInDateRange = (start, end) => {
         "Friday",
         "Saturday",
     ];
-
     const daysFoundIndices = new Set();
     let current = new Date(startObj);
     while (current <= endObj) {
@@ -79,23 +85,18 @@ const getDaysOfWeekInDateRange = (start, end) => {
         if (dayIndex !== 0) daysFoundIndices.add(dayIndex);
         current.setDate(current.getDate() + 1);
     }
-
     if (daysFoundIndices.size === 0) return "";
-
     const presentWorkingDays = standardWorkingOrder.filter((day) =>
         daysFoundIndices.has(dayNames.indexOf(day))
     );
-
     const startDayName = dayNames[startObj.getDay()];
     const startIndex = presentWorkingDays.indexOf(startDayName);
-
     const rotated =
         startIndex !== -1
             ? presentWorkingDays
                 .slice(startIndex)
                 .concat(presentWorkingDays.slice(0, startIndex))
             : presentWorkingDays;
-
     return rotated.map((d) => DAY_ABBREVIATIONS_MAP[d]).join(", ");
 };
 
@@ -111,6 +112,7 @@ const getDayAbbreviation = (dateString) => {
 
 const WorkspacePricing = () => {
     const location = useLocation();
+    const navigate = useNavigate(); // ✅ Added for redirect after auth
     const selectedPlan = location.state?.plan;
 
     // 🔥 NEW — Workspaces from backend
@@ -167,6 +169,12 @@ const WorkspacePricing = () => {
     const [totalHours, setTotalHours] = useState(1);
     const [numAttendees, setNumAttendees] = useState(1);
 
+    // ✅ Auth Check Function
+    const isAuthenticated = () => {
+        const user = localStorage.getItem("user");
+        return !!user;
+    };
+
     // ---- Auto-set end date based on start date ----
     useEffect(() => {
         if (!startDate || !modalData?.planType) return;
@@ -189,7 +197,6 @@ const WorkspacePricing = () => {
             const s = new Date(startDate);
             const e = new Date(endDate);
             if (e < s) return setDays(0);
-
             const diff = e - s;
             const d = Math.round(diff / (1000 * 60 * 60 * 24)) + 1;
             setDays(d);
@@ -219,15 +226,11 @@ const WorkspacePricing = () => {
     // ---- Calculation ----
     const calculateBaseAmount = () => {
         const price = modalData?.price || 0;
-
         if (modalData?.planType === "Daily") return price * days;
-
         if (modalData?.planType === "Monthly") return price;
-
         if (modalData?.planType === "Hourly") {
             return price * totalHours * days * numAttendees;
         }
-
         return 0;
     };
 
@@ -311,6 +314,14 @@ const WorkspacePricing = () => {
                                             <button
                                                 key={type}
                                                 onClick={() => {
+
+                                                    // ✅ AUTH CHECK before showing modal
+                                                    if (!isAuthenticated()) {
+                                                        toast.error("Please log in to book a workspace!");
+                                                        setTimeout(() => navigate("/auth"), 1000);
+                                                        return;
+                                                    }
+
                                                     setModalData({
                                                         ...item,
                                                         planType: type.charAt(0).toUpperCase() + type.slice(1),
@@ -353,7 +364,7 @@ const WorkspacePricing = () => {
                 </div>
             )}
 
-
+            {/* All existing modal steps remain unchanged */}
             <AnimatePresence>
                 {modalData && (
                     <motion.div
@@ -733,6 +744,8 @@ const WorkspacePricing = () => {
                                     <button
                                         onClick={() => {
                                             const bookingData = {
+                                                user_id: getUserId(),   // ⭐ ADDED — send logged in user_id
+
                                                 space_id: modalData.id,
                                                 workspace_title: modalData.title,
                                                 plan_type: modalData.planType,
@@ -752,6 +765,7 @@ const WorkspacePricing = () => {
                                                 referral_source: referral || null,
                                                 terms_accepted: termsAccepted ? 1 : 0,
                                             };
+
 
                                             fetch("http://localhost/vayuhu_backend/add_workspace_booking.php", {
                                                 method: "POST",
