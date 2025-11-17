@@ -296,7 +296,7 @@ const WorkspacePricing = () => {
                             transition={{ type: "spring", stiffness: 200 }}
                             className="relative rounded-2xl overflow-hidden shadow-lg border border-gray-200"
                         >
-                            <img src={item.image} alt={item.title} className="w-full h-64 object-cover" />
+                            <img src={item.image} alt={item.title} className="w-full h-56 bg-gray-100 overflow-hidden rounded-t-lg" />
                             <div className="p-6 bg-white">
                                 <h3 className="text-xl font-semibold text-gray-800 mb-2">{item.title}</h3>
                                 <p className="text-gray-600 mb-2">{item.desc}</p>
@@ -733,7 +733,7 @@ const WorkspacePricing = () => {
                                     <button
                                         onClick={() => {
                                             const bookingData = {
-                                                workspace_id: modalData.id,
+                                                space_id: modalData.id,
                                                 workspace_title: modalData.title,
                                                 plan_type: modalData.planType,
                                                 start_date: startDate,
@@ -753,7 +753,7 @@ const WorkspacePricing = () => {
                                                 terms_accepted: termsAccepted ? 1 : 0,
                                             };
 
-                                            fetch("http://localhost/vayuhu_backend/workspace_booking.php", {
+                                            fetch("http://localhost/vayuhu_backend/add_workspace_booking.php", {
                                                 method: "POST",
                                                 headers: {
                                                     "Content-Type": "application/json",
