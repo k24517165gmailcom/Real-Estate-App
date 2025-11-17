@@ -7,8 +7,8 @@ const Footer = () => {
     const navigate = useNavigate();
 
     const handleGalleryRedirect = () => {
-        navigate("/gallery"); // Navigates to /gallery page
-        window.scrollTo(0, 600); // Scroll to top after navigation
+        navigate("/gallery"); 
+        window.scrollTo(0, 600); 
     };
 
     return (
@@ -34,17 +34,27 @@ const Footer = () => {
                     </p>
                 </div>
 
-                {/* Gallery Redirect Section */}
+                {/* Gallery + Blog Section */}
                 <div className="md:w-1/3 flex flex-col items-center md:items-start justify-center">
                     <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
                         <Image className="text-orange-500" size={20} />
                         Explore Our Space
                     </h3>
+
+                    {/* Gallery Button */}
                     <button
                         onClick={handleGalleryRedirect}
-                        className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full font-medium transition-all duration-300"
+                        className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full font-medium transition-all duration-300 mb-3"
                     >
                         View Gallery
+                    </button>
+
+                    {/* Blog Button */}
+                    <button
+                        onClick={() => navigate("/blog")}
+                        className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-2 rounded-full font-medium transition-all duration-300"
+                    >
+                        Visit Blog
                     </button>
                 </div>
 

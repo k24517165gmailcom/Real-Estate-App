@@ -61,10 +61,14 @@ import VirtualOfficeEnquiries from "./pages/Admin/VirtualOfficeEnquiries";
 // ⚙️ Admin Settings
 import AdminSettings from "./pages/Admin/AdminSettings";
 
+// 📰 Blog Pages
+import BlogPage from "./pages/BlogPage";
+import BlogDetails from "./pages/BlogDetails"; // ✅ NEW IMPORT
+
+
 const Layout = ({ children }) => {
   const location = useLocation();
 
-  // 🧠 Hide header for dashboard + admin routes
   const hideHeaderRoutes = [
     "/dashboard",
     "/profile",
@@ -92,12 +96,15 @@ const App = () => {
     <Router>
       <Layout>
         <Routes>
+
           {/* 🌐 Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/virtual" element={<VirtualOfficeServices />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/blog/:id" element={<BlogDetails />} /> {/* ✅ NEW ROUTE */}
 
           {/* 👤 User Dashboard Routes */}
           <Route
