@@ -184,12 +184,18 @@ const WorkspacePricing = () => {
         if (modalData.planType === "Monthly") {
             end.setMonth(start.getMonth() + 1);
             end.setDate(end.getDate() - 1);
-        } else {
+        }
+        else if (modalData.planType === "Daily") {
+            end = new Date(start);
+        }
+        else if (modalData.planType === "Hourly") {
+            // ✅ Keep the same date but preserve time duration difference
             end = new Date(start);
         }
 
         setEndDate(end.toISOString().split("T")[0]);
     }, [startDate, modalData?.planType]);
+
 
     // ---- Calculate Days ----
     useEffect(() => {
@@ -203,14 +209,17 @@ const WorkspacePricing = () => {
         }
     }, [startDate, endDate]);
 
-    // ---- Calculate Total Hours ----
+    // Auto-update End Time when Start Time changes (Hourly plan)
     useEffect(() => {
-        if (modalData?.planType === "Hourly" && startTime && endTime) {
-            const sh = parseInt(startTime.split(":")[0]);
-            const eh = parseInt(endTime.split(":")[0]);
-            setTotalHours(eh - sh > 0 ? eh - sh : 1);
+        if (modalData?.planType === "Hourly" && startTime) {
+            const startHour = parseInt(startTime.split(":")[0]);
+            if (!endTime || parseInt(endTime.split(":")[0]) <= startHour) {
+                const nextHour = Math.min(20, startHour + 1);
+                setEndTime(`${nextHour.toString().padStart(2, "0")}:00`);
+            }
         }
-    }, [startTime, endTime, modalData?.planType]);
+    }, [startTime, modalData?.planType]);
+    ;
 
     // ---- Coupons ----
     const handleApplyCoupon = () => {
@@ -412,12 +421,11 @@ const WorkspacePricing = () => {
                                     You can select a start date within the next 2 months only.
                                 </p>
 
-
-
                                 {/* Time Selection (only for Hourly plans) */}
                                 {modalData.planType === "Hourly" && (
                                     <>
                                         <div className="grid grid-cols-2 gap-4 mb-4">
+                                            {/* --- Start Time --- */}
                                             <div>
                                                 <label className="block text-gray-700 mb-2">Start Time:</label>
                                                 <select
@@ -426,9 +434,9 @@ const WorkspacePricing = () => {
                                                     className="w-full border border-gray-300 rounded-lg px-4 py-2"
                                                 >
                                                     <option value="" disabled>Select Start Time</option>
-                                                    {TIME_OPTIONS.slice(0, -1).map(t => {
+                                                    {TIME_OPTIONS.slice(0, -1).map((t) => {
                                                         const now = new Date();
-                                                        const currentTimeValue = `${now.getHours().toString().padStart(2, '0')}:00`;
+                                                        const currentTimeValue = `${now.getHours().toString().padStart(2, "0")}:00`;
                                                         const isToday = startDate === new Date().toISOString().split("T")[0];
                                                         const isPast = isToday && t.value <= currentTimeValue;
 
@@ -439,8 +447,9 @@ const WorkspacePricing = () => {
                                                         );
                                                     })}
                                                 </select>
-
                                             </div>
+
+                                            {/* --- End Time --- */}
                                             <div>
                                                 <label className="block text-gray-700 mb-2">End Time:</label>
                                                 <select
@@ -450,11 +459,17 @@ const WorkspacePricing = () => {
                                                     disabled={!startTime}
                                                 >
                                                     <option value="" disabled>Select End Time</option>
-                                                    {TIME_OPTIONS.slice(1).map(t => (
-                                                        t.value > startTime && (
-                                                            <option key={t.value} value={t.value}>{t.display}</option>
-                                                        )
-                                                    ))}
+                                                    {TIME_OPTIONS.slice(1).map((t) => {
+                                                        const startHour = parseInt(startTime.split(":")[0]);
+                                                        const optionHour = parseInt(t.value.split(":")[0]);
+                                                        return (
+                                                            optionHour > startHour && (
+                                                                <option key={t.value} value={t.value}>
+                                                                    {t.display}
+                                                                </option>
+                                                            )
+                                                        );
+                                                    })}
                                                 </select>
                                             </div>
                                         </div>
@@ -462,14 +477,19 @@ const WorkspacePricing = () => {
                                         {/* ATTENDEE INPUT (Only for Video Conferencing Hourly Plan) */}
                                         {modalData.title === "Video Conferencing" && (
                                             <div className="mb-4">
-                                                <label className="block text-gray-700 mb-2">Number of Attendees:</label>
+                                                <label className="block text-gray-700 mb-2">
+                                                    Number of Attendees:
+                                                </label>
                                                 <input
                                                     type="number"
                                                     min="1"
                                                     max={modalData.capacity}
                                                     value={numAttendees}
                                                     onChange={(e) => {
-                                                        const val = Math.max(1, Math.min(modalData.capacity, parseInt(e.target.value) || 1));
+                                                        const val = Math.max(
+                                                            1,
+                                                            Math.min(modalData.capacity, parseInt(e.target.value) || 1)
+                                                        );
                                                         setNumAttendees(val);
                                                     }}
                                                     className="w-full border border-gray-300 rounded-lg px-4 py-2"
@@ -479,7 +499,6 @@ const WorkspacePricing = () => {
                                         )}
                                     </>
                                 )}
-
 
                                 <label className="flex items-center mb-4">
                                     <input
@@ -492,10 +511,20 @@ const WorkspacePricing = () => {
                                 </label>
 
                                 <button
-                                    disabled={!termsAccepted || !startDate ||
-                                        (modalData.planType === "Hourly" && (!startTime || !endTime || totalHours <= 0 || numAttendees < 1))}
-                                    onClick={() => setStep(2)}
-                                    className={`w-full py-2 rounded-lg font-medium transition ${termsAccepted && startDate && totalHours > 0 && numAttendees >= 1
+                                    disabled={
+                                        !termsAccepted ||
+                                        !startDate ||
+                                        (modalData.planType === "Hourly" &&
+                                            (!startTime || !endTime || totalHours <= 0 || numAttendees < 1))
+                                    }
+                                    onClick={() => {
+                                        console.log("Next clicked:", startTime, endTime);
+                                        setTimeout(() => setStep(2), 0); // ensures state settles
+                                    }}
+                                    className={`w-full py-2 rounded-lg font-medium transition ${termsAccepted &&
+                                        startDate &&
+                                        totalHours > 0 &&
+                                        numAttendees >= 1
                                         ? "bg-orange-500 text-white hover:bg-orange-600"
                                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                                         }`}
@@ -504,6 +533,7 @@ const WorkspacePricing = () => {
                                 </button>
                             </motion.div>
                         )}
+
 
                         {/* Step 2: End Date for Recurrence */}
                         {step === 2 && (
@@ -524,9 +554,11 @@ const WorkspacePricing = () => {
                                 </h3>
                                 <p className="text-gray-600 text-center mb-6">
                                     {modalData.title} & {modalData.planType} Pack
-                                    {/* Using format24HourTo12Hour on both start and end time */}
-                                    {modalData.planType === "Hourly" && startTime && endTime && ` from ${format24HourTo12Hour(startTime)} to ${format24HourTo12Hour(endTime)}`}
+                                    {modalData.planType === "Hourly" && startTime && endTime && (
+                                        <> from {format24HourTo12Hour(startTime)} to {format24HourTo12Hour(endTime)}</>
+                                    )}
                                 </p>
+
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                                     <div>
