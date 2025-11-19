@@ -14,7 +14,11 @@ const BlogPage = () => {
             const data = await res.json();
 
             if (data.success) {
-                setBlogs(data.data);
+                // Filter blogs with status "active" (case-insensitive)
+                const activeBlogs = data.data.filter(
+                    blog => blog.status && blog.status.toLowerCase() === "active"
+                );
+                setBlogs(activeBlogs);
             }
         } catch (err) {
             console.log("Fetch error:", err);
@@ -62,7 +66,6 @@ const BlogPage = () => {
                                         src={`${API_URL}/${blog.blog_image}`}
                                         alt={blog.blog_heading}
                                         className="w-full h-56 bg-gray-100 overflow-hidden rounded-t-lg"
-
                                     />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -79,12 +82,11 @@ const BlogPage = () => {
 
                                 {/* Short description (HTML) */}
                                 <div
-                                    className="text-sm text-gray-600 line-clamp-3 "
+                                    className="text-sm text-gray-600 line-clamp-3"
                                     dangerouslySetInnerHTML={{ __html: blog.blog_description }}
                                 ></div>
 
                                 {/* Footer Row: Author + Date + Read More */}
-                                {/* Footer Row: Posted By | Date | Read More */}
                                 <div className="mt-4 text-xs flex flex-wrap items-center justify-between gap-2">
 
                                     {/* Posted By */}
@@ -110,7 +112,6 @@ const BlogPage = () => {
 
                             </div>
                         </div>
-
                     ))}
 
                 </div>
