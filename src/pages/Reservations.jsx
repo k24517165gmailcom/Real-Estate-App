@@ -79,6 +79,7 @@ const Reservations = () => {
                   {[
                     "S.No.",
                     "Space",
+                    "Space Code",  // NEW COLUMN
                     "Pack",
                     "Date",
                     "Timings",
@@ -106,6 +107,7 @@ const Reservations = () => {
                     <tr key={booking.booking_id} className="hover:bg-gray-50">
                       <td className="p-2 border">{index + 1}</td>
                       <td className="p-2 border">{booking.workspace_title}</td>
+                      <td className="p-2 border">{booking.space_code}</td>  {/* NEW COLUMN */}
                       <td className="p-2 border">{booking.plan_type}</td>
 
                       <td className="p-2 border">
