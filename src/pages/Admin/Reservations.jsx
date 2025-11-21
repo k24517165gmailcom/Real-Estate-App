@@ -92,6 +92,7 @@ const Reservations = () => {
               <th className="py-2 px-4 border">Name</th>
               <th className="py-2 px-4 border">Mobile No</th>
               <th className="py-2 px-4 border">Space</th>
+              <th className="py-2 px-4 border">Space Code</th>  {/* NEW */}
               <th className="py-2 px-4 border">Pack</th>
               <th className="py-2 px-4 border">Date</th>
               <th className="py-2 px-4 border">Timings</th>
@@ -113,6 +114,7 @@ const Reservations = () => {
                   <td className="py-2 px-4 border">{res.name}</td>
                   <td className="py-2 px-4 border">{res.mobile_no}</td>
                   <td className="py-2 px-4 border">{res.space}</td>
+                  <td className="py-2 px-4 border">{res.space_code}</td> {/* NEW */}
                   <td className="py-2 px-4 border">{res.pack}</td>
                   <td className="py-2 px-4 border">{formatDate(res.date)}</td>
                   <td className="py-2 px-4 border">{res.timings}</td>

@@ -194,6 +194,7 @@ const AdminDashboard = () => {
                   <th className="p-2 border">Name</th>
                   <th className="p-2 border">Mobile No</th>
                   <th className="p-2 border">Space</th>
+                  <th className="p-2 border">Space Code</th> {/* NEW */}
                   <th className="p-2 border">Pack</th>
                   <th className="p-2 border">Date</th>
                   <th className="p-2 border">Timings</th>
@@ -210,6 +211,7 @@ const AdminDashboard = () => {
                     <td className="p-2 border">{r.name}</td>
                     <td className="p-2 border">{r.mobile_no}</td>
                     <td className="p-2 border">{r.space}</td>
+                    <td className="p-2 border">{r.space_code}</td> {/* NEW */}
                     <td className="p-2 border">{r.pack}</td>
                     <td className="p-2 border">{formatDate(r.date)}</td>
                     <td className="p-2 border">{r.timings}</td>
