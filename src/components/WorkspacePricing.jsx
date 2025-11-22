@@ -127,7 +127,6 @@ const WorkspacePricing = () => {
   const [days, setDays] = useState(0);
   const [totalHours, setTotalHours] = useState(1);
   const [numAttendees, setNumAttendees] = useState(1);
-  
 
   // NEW: data for the small radio popup to pick a space code
   const [codeSelectModal, setCodeSelectModal] = useState(null);
@@ -406,6 +405,40 @@ const WorkspacePricing = () => {
   const totalPreDiscount = (displayAmount + Number(displayGst)).toFixed(0);
   const finalTotal = calculateTotal().toFixed(0);
 
+  // Helper to render each seat
+  const renderSeat = (c) => {
+    const isSelected = codeSelectModal.selectedId === c.id;
+    const isDisabled = !c.raw.is_available;
+
+    return (
+      <motion.button
+        key={c.id}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        disabled={isDisabled}
+        title={isDisabled ? c.raw.availability_reason : "Available"}
+        onClick={() => {
+          if (!isDisabled) {
+            setCodeSelectModal((prev) => ({
+              ...prev,
+              selectedId: c.id,
+            }));
+          }
+        }}
+        className={`w-14 h-10 rounded-md flex items-center justify-center text-xs font-semibold transition-all border
+        ${
+          isDisabled
+            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+            : isSelected
+            ? "bg-orange-500 text-white border-orange-600"
+            : "bg-green-100 text-gray-700 border-green-300 hover:bg-green-200"
+        }`}
+      >
+        {c.code}
+      </motion.button>
+    );
+  };
+
   return (
     <section
       id="WorkSpaces"
@@ -509,7 +542,7 @@ const WorkspacePricing = () => {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl relative"
+              className="bg-white rounded-2xl p-10 w-full max-w-2xl shadow-2xl relative"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -529,44 +562,71 @@ const WorkspacePricing = () => {
                 </span>
               </h3>
 
-              {/* Seat-style selection grid */}
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 justify-items-center mb-6">
-                {codeSelectModal.codes.map((c) => {
-                  const isSelected = codeSelectModal.selectedId === c.id;
+              {/* Seat-style selection grid (Conditional Walkway) */}
+              <div className="flex flex-col items-center gap-5 mb-6">
+                {(() => {
+                  // sort space codes so WS01 starts at top
+                  const seats = [...codeSelectModal.codes].sort((a, b) =>
+                    a.code.localeCompare(b.code, undefined, { numeric: true })
+                  );
 
-                  // ← Add this line
-                  const isDisabled = !c.raw.is_available; // or !c.is_available if your API returns it directly
+                  // Check if we should show walkways
+                  const noWalkway = [
+                    "Team Leads Cubicle",
+                    "Manager Cubicle",
+                    "Executive Cabin",
+                  ].includes(codeSelectModal.groupTitle);
 
                   return (
-                    <motion.button
-                      key={c.id}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                      disabled={isDisabled} // ← use it here
-                      title={
-                        isDisabled ? c.raw.availability_reason : "Available"
-                      } // optional tooltip
-                      onClick={() => {
-                        if (!isDisabled) {
-                          setCodeSelectModal((prev) => ({
-                            ...prev,
-                            selectedId: c.id,
-                          }));
-                        }
-                      }}
-                      className={`w-16 h-12 rounded-lg flex items-center justify-center text-sm font-semibold transition-all border
-        ${
-          isDisabled
-            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-            : isSelected
-            ? "bg-orange-500 text-white border-orange-600"
-            : "bg-green-100 text-gray-700 border-green-300 hover:bg-green-200"
-        }`}
-                    >
-                      {c.code}
-                    </motion.button>
+                    <>
+                      {/* Row 1 → first 3 */}
+                      <div className="flex justify-center gap-4">
+                        {seats.slice(0, 3).map(renderSeat)}
+                      </div>
+                      {/* Walkway separator (only if allowed) */}
+                      {!noWalkway && (
+                        <div className="w-3/4 border-t border-gray-300 my-2"></div>
+                      )}
+
+                      {/* Row 2 → next 7 */}
+                      <div className="flex justify-center gap-4">
+                        {seats.slice(3, 10).map(renderSeat)}
+                      </div>
+
+                      {/* Row 3 → 7 front + 7 back */}
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="flex justify-center gap-4">
+                          {seats.slice(10, 17).map(renderSeat)}
+                        </div>
+                        {!noWalkway && (
+                          <div className="w-3/4 border-t border-gray-300 my-2"></div>
+                        )}
+                        <div className="flex justify-center gap-4">
+                          {seats.slice(17, 24).map(renderSeat)}
+                        </div>
+                      </div>
+
+                      
+                      {/* Row 4 → 7 front + 7 back */}
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="flex justify-center gap-4">
+                          {seats.slice(24, 31).map(renderSeat)}
+                        </div>
+                        {!noWalkway && (
+                          <div className="w-3/4 border-t border-gray-300 my-2"></div>
+                        )}
+                        <div className="flex justify-center gap-4">
+                          {seats.slice(31, 38).map(renderSeat)}
+                        </div>
+                      </div>
+
+                      {/* Row 5 → remaining 7 */}
+                      <div className="flex justify-center gap-4">
+                        {seats.slice(38, 45).map(renderSeat)}
+                      </div>
+                    </>
                   );
-                })}
+                })()}
               </div>
 
               {/* Legend */}
