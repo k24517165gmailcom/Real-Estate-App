@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom"; // ✅ Added useNavigate
+import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// ⭐ ADDED — function to extract user_id from localStorage
+// Helper to get logged-in user id (same as yours)
 const getUserId = () => {
   try {
     const user = JSON.parse(localStorage.getItem("user"));
@@ -14,8 +14,7 @@ const getUserId = () => {
   }
 };
 
-
-// --- GLOBAL DAY MAPPINGS ---
+// Day maps and time helpers copied from your original file:
 const DAY_ABBREVIATIONS_MAP = {
   Sunday: "Sun",
   Monday: "Mon",
@@ -25,9 +24,7 @@ const DAY_ABBREVIATIONS_MAP = {
   Friday: "Fri",
   Saturday: "Sat",
 };
-// ---------------------------
 
-// Helper function to generate time options in 24-hour format for state storage
 const generateTimeOptions = () => {
   const times = [];
   for (let i = 8; i <= 20; i++) {
@@ -39,7 +36,6 @@ const generateTimeOptions = () => {
   }
   return times;
 };
-
 const TIME_OPTIONS = generateTimeOptions();
 
 const format24HourTo12Hour = (time24) => {
@@ -56,7 +52,6 @@ const format24HourTo12Hour = (time24) => {
   }
 };
 
-// Returns chronological list of working days (Mon–Sat)
 const getDaysOfWeekInDateRange = (start, end) => {
   const startObj = new Date(start);
   const endObj = new Date(end);
@@ -100,7 +95,6 @@ const getDaysOfWeekInDateRange = (start, end) => {
   return rotated.map((d) => DAY_ABBREVIATIONS_MAP[d]).join(", ");
 };
 
-// Single day abbreviation
 const getDayAbbreviation = (dateString) => {
   if (!dateString) return "";
   const dayName = new Date(dateString).toLocaleDateString("en-US", {
@@ -109,57 +103,17 @@ const getDayAbbreviation = (dateString) => {
   return DAY_ABBREVIATIONS_MAP[dayName] || dayName;
 };
 
-
 const WorkspacePricing = () => {
   const location = useLocation();
-  const navigate = useNavigate(); // ✅ Added for redirect after auth
+  const navigate = useNavigate();
   const selectedPlan = location.state?.plan;
 
-  // 🔥 NEW — Workspaces from backend
+  // workspaces from backend
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ---- Fetch workspace list ----
-  useEffect(() => {
-    fetch("http://localhost/vayuhu_backend/get_spaces.php")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          const formatted = data.spaces
-            .filter((i) => i.status === "Active") // ⭐ only active spaces
-            .map((i) => ({
-              id: i.id,
-              title: i.space,
-              desc: i.min_duration_desc || "",
-              type: i.space_code,
-              capacity: 10,
-              monthly: Number(i.per_month) || null,
-              daily: Number(i.per_day) || null,
-              hourly: Number(i.per_hour) || null,
-              image: i.image_url,
-              status: i.status || "Active",
-              raw: i,
-            }));
-
-
-
-          setWorkspaces(formatted);
-        } else {
-          setError("No spaces found");
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError("Failed to load workspace data");
-        setLoading(false);
-      });
-  }, []);
-
-  // ---------------------------
-  // STATE VARIABLES
-  // ---------------------------
+  // Modal & booking states (kept same as your original)
   const [modalData, setModalData] = useState(null);
   const [step, setStep] = useState(1);
   const [startDate, setStartDate] = useState("");
@@ -174,13 +128,74 @@ const WorkspacePricing = () => {
   const [totalHours, setTotalHours] = useState(1);
   const [numAttendees, setNumAttendees] = useState(1);
 
-  // ✅ Auth Check Function
+  // NEW: data for the small radio popup to pick a space code
+  const [codeSelectModal, setCodeSelectModal] = useState(null);
+  // structure: { groupTitle, codes: [{id, code, raw}], planType, price }
+
+  useEffect(() => {
+    fetch("http://localhost/vayuhu_backend/get_spaces.php")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          const formatted = data.spaces
+            .filter((i) => i.status === "Active")
+            .map((i) => ({
+              id: i.id,
+              title: i.space,
+              desc: i.min_duration_desc || "",
+              type: i.space_code, // space code
+              capacity: Number(i.capacity) || 10,
+              monthly: Number(i.per_month) || null,
+              daily: Number(i.per_day) || null,
+              hourly: Number(i.per_hour) || null,
+              image: i.image_url,
+              status: i.status || "Active",
+              raw: i,
+            }));
+          setWorkspaces(formatted);
+        } else {
+          setError("No spaces found");
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError("Failed to load workspace data");
+        setLoading(false);
+      });
+  }, []);
+
+  // GROUP workspaces by title + pricing (so duplicates with same pricing collapse)
+  const groupedWorkspaces = useMemo(() => {
+    // key by title + hourly + daily + monthly for grouping
+    const map = new Map();
+    workspaces.forEach((w) => {
+      const key = `${w.title}||${w.hourly ?? 0}||${w.daily ?? 0}||${w.monthly ?? 0}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          title: w.title,
+          desc: w.desc,
+          image: w.image,
+          hourly: w.hourly,
+          daily: w.daily,
+          monthly: w.monthly,
+          items: [{ id: w.id, code: w.type, raw: w.raw }],
+          capacity: w.capacity,
+        });
+      } else {
+        map.get(key).items.push({ id: w.id, code: w.type, raw: w.raw });
+      }
+    });
+    return Array.from(map.values());
+  }, [workspaces]);
+
+  // Auth check (same as yours)
   const isAuthenticated = () => {
     const user = localStorage.getItem("user");
     return !!user;
   };
 
-  // ---- Auto-set end date based on start date ----
+  // Auto-set end date logic (preserved)
   useEffect(() => {
     if (!startDate || !modalData?.planType) return;
     const start = new Date(startDate);
@@ -189,20 +204,16 @@ const WorkspacePricing = () => {
     if (modalData.planType === "Monthly") {
       end.setMonth(start.getMonth() + 1);
       end.setDate(end.getDate() - 1);
-    }
-    else if (modalData.planType === "Daily") {
+    } else if (modalData.planType === "Daily") {
       end = new Date(start);
-    }
-    else if (modalData.planType === "Hourly") {
-      // ✅ Keep the same date but preserve time duration difference
+    } else if (modalData.planType === "Hourly") {
       end = new Date(start);
     }
 
     setEndDate(end.toISOString().split("T")[0]);
   }, [startDate, modalData?.planType]);
 
-
-  // ---- Calculate Days ----
+  // Days calculation
   useEffect(() => {
     if (startDate && endDate) {
       const s = new Date(startDate);
@@ -214,7 +225,7 @@ const WorkspacePricing = () => {
     }
   }, [startDate, endDate]);
 
-  // Auto-update End Time when Start Time changes (Hourly plan)
+  // Auto-update End Time for Hourly
   useEffect(() => {
     if (modalData?.planType === "Hourly" && startTime) {
       const startHour = parseInt(startTime.split(":")[0]);
@@ -224,9 +235,8 @@ const WorkspacePricing = () => {
       }
     }
   }, [startTime, modalData?.planType]);
-  ;
 
-  // ---- Coupons ----
+  // Coupons
   const handleApplyCoupon = () => {
     if (coupon.trim().toLowerCase() === "vayuhu10") {
       setDiscount(10);
@@ -237,7 +247,7 @@ const WorkspacePricing = () => {
     setCoupon("");
   };
 
-  // ---- Calculation ----
+  // Billing calculations (same)
   const calculateBaseAmount = () => {
     const price = modalData?.price || 0;
     if (modalData?.planType === "Daily") return price * days;
@@ -268,14 +278,122 @@ const WorkspacePricing = () => {
     setDays(0);
     setTotalHours(1);
     setNumAttendees(1);
+    setCodeSelectModal(null);
   };
 
+  // When user clicks a Plan button on a grouped card:
+  const handlePlanClick = (group, planType) => {
+    // Auth check first
+    if (!isAuthenticated()) {
+      toast.error("Please log in to book a workspace!");
+      setTimeout(() => navigate("/auth"), 1000);
+      return;
+    }
+
+    // If group has more than one code, open the small code selection modal (radio)
+    if (group.items.length > 1) {
+      setCodeSelectModal({
+        groupTitle: group.title,
+        codes: group.items, // [{id, code, raw}]
+        planType,
+        price:
+          planType === "Hourly"
+            ? group.hourly
+            : planType === "Daily"
+            ? group.daily
+            : group.monthly,
+      });
+      return;
+    }
+
+    // else (only one space code) proceed directly with selecting that workspace
+    const sole = group.items[0];
+    const chosenRaw = sole.raw;
+    // build modalData identical to previous flow
+    setModalData({
+      id: sole.id,
+      title: group.title,
+      desc: group.desc,
+      type: sole.code,
+      capacity: group.capacity,
+      planType: planType.charAt(0).toUpperCase() + planType.slice(1),
+      price:
+        planType === "Hourly"
+          ? group.hourly
+          : planType === "Daily"
+          ? group.daily
+          : group.monthly,
+      raw: chosenRaw,
+    });
+
+    // set defaults
+    setStartDate(new Date().toISOString().split("T")[0]);
+    setEndDate("");
+    setStep(1);
+    if (planType === "hourly") {
+      const now = new Date();
+      now.setHours(now.getHours() + (now.getMinutes() > 0 ? 1 : 0), 0, 0, 0);
+      const h = now.getHours();
+      setStartTime(`${h.toString().padStart(2, "0")}:00`);
+      setEndTime(`${Math.min(20, h + 1).toString().padStart(2, "0")}:00`);
+    } else {
+      setStartTime("08:00");
+      setEndTime("20:00");
+    }
+    setNumAttendees(1);
+  };
+
+  // Called when user confirms a code from the small radio popup
+  const confirmCodeSelection = (selectedId, planType) => {
+    // find raw by id in workspaces
+    const found = workspaces.find((w) => String(w.id) === String(selectedId));
+    if (!found) {
+      toast.error("Selected space not found");
+      setCodeSelectModal(null);
+      return;
+    }
+
+    setModalData({
+      id: found.id,
+      title: found.title,
+      desc: found.desc,
+      type: found.type,
+      capacity: found.capacity,
+      planType: planType.charAt(0).toUpperCase() + planType.slice(1),
+      price:
+        planType === "hourly"
+          ? found.hourly
+          : planType === "daily"
+          ? found.daily
+          : found.monthly,
+      raw: found.raw,
+    });
+
+    // close code selector
+    setCodeSelectModal(null);
+
+    // initialize booking defaults (same as before)
+    setStartDate(new Date().toISOString().split("T")[0]);
+    setEndDate("");
+    setStep(1);
+    if (planType === "hourly") {
+      const now = new Date();
+      now.setHours(now.getHours() + (now.getMinutes() > 0 ? 1 : 0), 0, 0, 0);
+      const h = now.getHours();
+      setStartTime(`${h.toString().padStart(2, "0")}:00`);
+      setEndTime(`${Math.min(20, h + 1).toString().padStart(2, "0")}:00`);
+    } else {
+      setStartTime("08:00");
+      setEndTime("20:00");
+    }
+    setNumAttendees(1);
+  };
+
+  // Display numbers for billing
   const displayAmount = calculateBaseAmount();
   const displayGst = (displayAmount * 0.18).toFixed(0);
   const totalPreDiscount = (displayAmount + Number(displayGst)).toFixed(0);
   const finalTotal = calculateTotal().toFixed(0);
-
-
 
   return (
     <section id="WorkSpaces" className="container mx-auto px-6 md:px-20 lg:px-32 py-20">
@@ -290,95 +408,134 @@ const WorkspacePricing = () => {
         </p>
       </div>
 
-      {/* Loading / Error */}
       {loading && (
-        <div className="text-center py-10 text-gray-500 text-lg">
-          Loading workspaces...
-        </div>
+        <div className="text-center py-10 text-gray-500 text-lg">Loading workspaces...</div>
       )}
-      {error && (
-        <div className="text-center py-10 text-red-500 text-lg">
-          {error}
-        </div>
-      )}
+      {error && <div className="text-center py-10 text-red-500 text-lg">{error}</div>}
 
-      {/* Workspace Grid */}
       {!loading && !error && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
-          {workspaces.map((item) => (
+          {groupedWorkspaces.map((group, idx) => (
             <motion.div
-              key={item.id}
-              id={item.id}
+              key={`${group.title}-${idx}`}
               whileHover={{ scale: 1.03 }}
               transition={{ type: "spring", stiffness: 200 }}
               className="relative rounded-2xl overflow-hidden shadow-lg border border-gray-200"
             >
-              <img src={item.image} alt={item.title} className="w-full h-56 bg-gray-100 overflow-hidden rounded-t-lg" />
+              <img
+                src={group.image}
+                alt={group.title}
+                className="w-full h-56 bg-gray-100 overflow-hidden rounded-t-lg object-cover"
+              />
               <div className="p-6 bg-white">
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">{item.title}</h3>
-                <p className="text-gray-600 mb-2">{item.desc}</p>
-                <p className="text-sm text-gray-500 mb-2">Type: {item.type}</p>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">{group.title}</h3>
+                <p className="text-gray-600 mb-2">{group.desc}</p>
                 <p className="text-sm text-gray-500 mb-2">
-                  Capacity: {item.capacity} persons
+                  {group.items.length > 1 ? (
+                    <span className="italic text-sm text-gray-600">
+                      Multiple space codes ({group.items.map((it) => it.code).join(", ")})
+                    </span>
+                  ) : (
+                    <span className="text-sm text-gray-500">Code: {group.items[0].code}</span>
+                  )}
                 </p>
 
-                {["monthly", "daily", "hourly"].map(
-                  (type) =>
-                    item[type] && (
-                      <button
-                        key={type}
-                        onClick={() => {
-
-                          // ✅ AUTH CHECK before showing modal
-                          if (!isAuthenticated()) {
-                            toast.error("Please log in to book a workspace!");
-                            setTimeout(() => navigate("/auth"), 1000);
-                            return;
-                          }
-
-                          setModalData({
-                            ...item,
-                            planType: type.charAt(0).toUpperCase() + type.slice(1),
-                            price: item[type],
-                          });
-
-                          setStartDate(new Date().toISOString().split("T")[0]);
-                          setEndDate("");
-                          setStep(1);
-
-                          if (type === "hourly") {
-                            const now = new Date();
-                            now.setHours(
-                              now.getHours() + (now.getMinutes() > 0 ? 1 : 0),
-                              0,
-                              0,
-                              0
-                            );
-                            const h = now.getHours();
-                            setStartTime(`${h.toString().padStart(2, "0")}:00`);
-                            setEndTime(
-                              `${Math.min(20, h + 1).toString().padStart(2, "0")}:00`
-                            );
-                          } else {
-                            setStartTime("08:00");
-                            setEndTime("20:00");
-                          }
-
-                          setNumAttendees(1);
-                        }}
-                        className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium mr-2 mb-2 hover:bg-orange-600 transition"
-                      >
-                        {type.charAt(0).toUpperCase() + type.slice(1)} ₹{item[type]}
-                      </button>
-                    )
-                )}
+                <div className="flex flex-wrap">
+                  {group.hourly && (
+                    <button
+                      onClick={() => handlePlanClick(group, "hourly")}
+                      className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium mr-2 mb-2 hover:bg-orange-600 transition"
+                    >
+                      Hourly ₹{group.hourly}
+                    </button>
+                  )}
+                  {group.daily && (
+                    <button
+                      onClick={() => handlePlanClick(group, "daily")}
+                      className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium mr-2 mb-2 hover:bg-orange-600 transition"
+                    >
+                      Daily ₹{group.daily}
+                    </button>
+                  )}
+                  {group.monthly && (
+                    <button
+                      onClick={() => handlePlanClick(group, "monthly")}
+                      className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium mr-2 mb-2 hover:bg-orange-600 transition"
+                    >
+                      Monthly ₹{group.monthly}
+                    </button>
+                  )}
+                </div>
               </div>
             </motion.div>
           ))}
         </div>
       )}
 
-      {/* All existing modal steps remain unchanged */}
+      {/* Code Selection Modal (small radio popup) */}
+      <AnimatePresence>
+        {codeSelectModal && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+            >
+              <h4 className="text-lg font-semibold mb-3">
+                Select Space Code for {codeSelectModal.groupTitle}
+              </h4>
+
+              <div className="max-h-48 overflow-auto mb-4">
+                {codeSelectModal.codes.map((c) => (
+                  <label
+                    key={c.id}
+                    className="flex items-center p-2 rounded hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="spaceCode"
+                      className="mr-3"
+                      value={c.id}
+                      defaultChecked={false}
+                      onChange={() => setCodeSelectModal((prev) => ({ ...prev, selectedId: c.id }))}
+                    />
+                    <div>
+                      <div className="font-medium">{c.code}</div>
+                      <div className="text-sm text-gray-500">ID: {c.id}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setCodeSelectModal(null)}
+                  className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const sel = codeSelectModal.selectedId ?? codeSelectModal.codes[0].id;
+                    confirmCodeSelection(sel, codeSelectModal.planType);
+                  }}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                >
+                  Confirm
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Existing Booking Modal (Steps 1-3). Reused from your original with slight adjustments */}
       <AnimatePresence>
         {modalData && (
           <motion.div
@@ -387,7 +544,7 @@ const WorkspacePricing = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {/* Step 1: Start Date & Time + Attendees */}
+            {/* Step 1 */}
             {step === 1 && (
               <motion.div
                 className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl relative"
@@ -405,8 +562,7 @@ const WorkspacePricing = () => {
                   {modalData.title} - {modalData.planType} Plan
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  Choose your required timings for the workspace plan &{" "}
-                  {modalData.planType.toLowerCase()} pack
+                  Choose your required timings for the workspace plan & {modalData.planType.toLowerCase()} pack
                 </p>
 
                 <label className="block text-gray-700 mb-2">Start Date:</label>
@@ -415,22 +571,20 @@ const WorkspacePricing = () => {
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   min={new Date().toISOString().split("T")[0]}
-                  max={(() => {
+                  max={() => {
                     const maxDate = new Date();
                     maxDate.setMonth(maxDate.getMonth() + 2);
                     return maxDate.toISOString().split("T")[0];
-                  })()}
+                  }}
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4"
                 />
                 <p className="text-sm text-gray-500 mb-3">
                   You can select a start date within the next 2 months only.
                 </p>
 
-                {/* Time Selection (only for Hourly plans) */}
                 {modalData.planType === "Hourly" && (
                   <>
                     <div className="grid grid-cols-2 gap-4 mb-4">
-                      {/* --- Start Time --- */}
                       <div>
                         <label className="block text-gray-700 mb-2">Start Time:</label>
                         <select
@@ -444,7 +598,6 @@ const WorkspacePricing = () => {
                             const currentTimeValue = `${now.getHours().toString().padStart(2, "0")}:00`;
                             const isToday = startDate === new Date().toISOString().split("T")[0];
                             const isPast = isToday && t.value <= currentTimeValue;
-
                             return (
                               <option key={t.value} value={t.value} disabled={isPast}>
                                 {t.display} {isPast ? "(Past)" : ""}
@@ -454,7 +607,6 @@ const WorkspacePricing = () => {
                         </select>
                       </div>
 
-                      {/* --- End Time --- */}
                       <div>
                         <label className="block text-gray-700 mb-2">End Time:</label>
                         <select
@@ -465,7 +617,7 @@ const WorkspacePricing = () => {
                         >
                           <option value="" disabled>Select End Time</option>
                           {TIME_OPTIONS.slice(1).map((t) => {
-                            const startHour = parseInt(startTime.split(":")[0]);
+                            const startHour = startTime ? parseInt(startTime.split(":")[0]) : -1;
                             const optionHour = parseInt(t.value.split(":")[0]);
                             return (
                               optionHour > startHour && (
@@ -479,12 +631,9 @@ const WorkspacePricing = () => {
                       </div>
                     </div>
 
-                    {/* ATTENDEE INPUT (Only for Video Conferencing Hourly Plan) */}
                     {modalData.title === "Video Conferencing" && (
                       <div className="mb-4">
-                        <label className="block text-gray-700 mb-2">
-                          Number of Attendees:
-                        </label>
+                        <label className="block text-gray-700 mb-2">Number of Attendees:</label>
                         <input
                           type="number"
                           min="1"
@@ -522,10 +671,7 @@ const WorkspacePricing = () => {
                     (modalData.planType === "Hourly" &&
                       (!startTime || !endTime || totalHours <= 0 || numAttendees < 1))
                   }
-                  onClick={() => {
-                    console.log("Next clicked:", startTime, endTime);
-                    setTimeout(() => setStep(2), 0); // ensures state settles
-                  }}
+                  onClick={() => setTimeout(() => setStep(2), 0)}
                   className={`w-full py-2 rounded-lg font-medium transition ${termsAccepted &&
                     startDate &&
                     totalHours > 0 &&
@@ -539,8 +685,7 @@ const WorkspacePricing = () => {
               </motion.div>
             )}
 
-
-            {/* Step 2: End Date for Recurrence */}
+            {/* Step 2 */}
             {step === 2 && (
               <motion.div
                 className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl relative"
@@ -564,47 +709,24 @@ const WorkspacePricing = () => {
                   )}
                 </p>
 
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                   <div>
                     <label className="block text-gray-700 mb-2">Start Date:</label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      readOnly
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 shadow-sm bg-gray-100"
-                    />
+                    <input type="date" value={startDate} readOnly className="w-full border border-gray-300 rounded-lg px-4 py-2 shadow-sm bg-gray-100" />
                   </div>
                   <div>
                     <label className="block text-gray-700 mb-2">End Date:</label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      readOnly
-                      disabled
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 shadow-sm bg-gray-100 cursor-not-allowed text-gray-600"
-                    />
-                    <p className="text-sm text-gray-500 mt-1">
-                      End date is auto-calculated based on your selected plan.
-                    </p>
+                    <input type="date" value={endDate} readOnly disabled className="w-full border border-gray-300 rounded-lg px-4 py-2 shadow-sm bg-gray-100 cursor-not-allowed text-gray-600" />
+                    <p className="text-sm text-gray-500 mt-1">End date is auto-calculated based on your selected plan.</p>
                   </div>
-
                 </div>
 
                 <div className="flex justify-between">
-                  <button
-                    onClick={() => setStep(1)}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
-                  >
-                    « Back
-                  </button>
+                  <button onClick={() => setStep(1)} className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">« Back</button>
                   <button
                     disabled={!endDate || new Date(endDate) < new Date(startDate)}
                     onClick={() => setStep(3)}
-                    className={`px-4 py-2 rounded-lg font-medium transition ${endDate && new Date(endDate) >= new Date(startDate)
-                      ? "bg-orange-500 text-white hover:bg-orange-600"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      }`}
+                    className={`px-4 py-2 rounded-lg font-medium transition ${endDate && new Date(endDate) >= new Date(startDate) ? "bg-orange-500 text-white hover:bg-orange-600" : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}
                   >
                     Next »
                   </button>
@@ -612,7 +734,7 @@ const WorkspacePricing = () => {
               </motion.div>
             )}
 
-            {/* Step 3: Review Details and Payment */}
+            {/* Step 3 */}
             {step === 3 && (
               <motion.div
                 className="bg-white rounded-2xl p-8 max-w-3xl w-full shadow-xl relative overflow-y-auto max-h-[90vh]"
@@ -626,6 +748,7 @@ const WorkspacePricing = () => {
                 >
                   ✕
                 </button>
+
                 <h3 className="text-xl font-semibold text-gray-800 mb-2 text-center">
                   <span className="text-red-500 font-bold uppercase">REVIEW DETAILS</span>
                 </h3>
@@ -635,10 +758,7 @@ const WorkspacePricing = () => {
                   {modalData.title === "Video Conferencing" && ` for ${numAttendees} person(s)`}
                 </p>
 
-                {/* START: Two-Column Clean Layout */}
                 <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6">
-
-                  {/* Row 1: Plan & Pack (Aligned with screenshot) */}
                   <div>
                     <label className="block text-gray-700 mb-1">Plan</label>
                     <input value={modalData.title} readOnly className="w-full border rounded-lg px-3 py-2" />
@@ -648,29 +768,20 @@ const WorkspacePricing = () => {
                     <input value={modalData.planType} readOnly className="w-full border rounded-lg px-3 py-2" />
                   </div>
 
-                  {/* Row 2: No of Days & Days of Week List */}
                   <div>
-                    <label className="block text-gray-700 mb-1">
-                      {modalData.planType === "Monthly" ? "No of Days:" : "No of Days"}
-                    </label>
+                    <label className="block text-gray-700 mb-1">{modalData.planType === "Monthly" ? "No of Days:" : "No of Days"}</label>
                     <input value={days} readOnly className="w-full border rounded-lg px-3 py-2" />
                   </div>
 
-                  {/* Right side of Row 2: Days of Week (Chronological & Abbreviated) */}
                   <div>
                     <label className="block text-gray-700 mb-1">Days:</label>
                     <input
-                      value={
-                        modalData.planType === "Monthly"
-                          ? getDaysOfWeekInDateRange(startDate, endDate)
-                          : (days === 1 ? getDayAbbreviation(startDate) : `${days} Days Recurrence`)
-                      }
+                      value={modalData.planType === "Monthly" ? getDaysOfWeekInDateRange(startDate, endDate) : (days === 1 ? getDayAbbreviation(startDate) : `${days} Days Recurrence`)}
                       readOnly
                       className="w-full border rounded-lg px-3 py-2"
                     />
                   </div>
 
-                  {/* Row 3: Start/End Date */}
                   <div>
                     <label className="block text-gray-700 mb-1">Start Date</label>
                     <input value={startDate} readOnly className="w-full border rounded-lg px-3 py-2" />
@@ -680,25 +791,15 @@ const WorkspacePricing = () => {
                     <input value={endDate} readOnly className="w-full border rounded-lg px-3 py-2" />
                   </div>
 
-                  {/* Row 4: Start/End Time */}
                   <div>
                     <label className="block text-gray-700 mb-1">Start Time</label>
-                    <input
-                      value={modalData.planType === "Hourly" ? format24HourTo12Hour(startTime) : "08:00 AM"}
-                      readOnly
-                      className="w-full border rounded-lg px-3 py-2"
-                    />
+                    <input value={modalData.planType === "Hourly" ? format24HourTo12Hour(startTime) : "08:00 AM"} readOnly className="w-full border rounded-lg px-3 py-2" />
                   </div>
                   <div>
                     <label className="block text-gray-700 mb-1">End Time</label>
-                    <input
-                      value={modalData.planType === "Hourly" ? format24HourTo12Hour(endTime) : "08:00 PM"}
-                      readOnly
-                      className="w-full border rounded-lg px-3 py-2"
-                    />
+                    <input value={modalData.planType === "Hourly" ? format24HourTo12Hour(endTime) : "08:00 PM"} readOnly className="w-full border rounded-lg px-3 py-2" />
                   </div>
 
-                  {/* Row 5: Amount & GST (Financials start) */}
                   <div>
                     <label className="block text-gray-700 mb-1">
                       Amount (
@@ -715,7 +816,6 @@ const WorkspacePricing = () => {
                     <input value={`₹${displayGst}`} readOnly className="w-full border rounded-lg px-3 py-2" />
                   </div>
 
-                  {/* Row 6: Total & Coupon */}
                   <div>
                     <label className="block text-gray-700 mb-1">Total (Pre-Discount)</label>
                     <input value={`₹${totalPreDiscount}`} readOnly className="w-full border rounded-lg px-3 py-2" />
@@ -723,43 +823,23 @@ const WorkspacePricing = () => {
                   <div>
                     <label className="block text-gray-700 mb-1">Apply Coupon</label>
                     <div className="flex">
-                      <input
-                        value={coupon}
-                        onChange={(e) => setCoupon(e.target.value)}
-                        placeholder="Enter code"
-                        className="border rounded-l-lg px-3 py-2 w-full"
-                      />
-                      <button
-                        onClick={handleApplyCoupon}
-                        className="bg-orange-500 text-white px-4 py-2 rounded-r-lg hover:bg-orange-600"
-                      >
-                        Apply
-                      </button>
+                      <input value={coupon} onChange={(e) => setCoupon(e.target.value)} placeholder="Enter code" className="border rounded-l-lg px-3 py-2 w-full" />
+                      <button onClick={handleApplyCoupon} className="bg-orange-500 text-white px-4 py-2 rounded-r-lg hover:bg-orange-600">Apply</button>
                     </div>
                   </div>
 
-                  {/* Row 7: Discount & Final Total */}
                   <div>
                     <label className="block text-gray-700 mb-1">Discount</label>
                     <input value={`₹${discount}`} readOnly className="w-full border rounded-lg px-3 py-2" />
                   </div>
                   <div>
                     <label className="block text-gray-700 mb-1">Final Total (including GST)</label>
-                    <input
-                      value={`₹${finalTotal}`}
-                      readOnly
-                      className="w-full border rounded-lg px-3 py-2 font-semibold"
-                    />
+                    <input value={`₹${finalTotal}`} readOnly className="w-full border rounded-lg px-3 py-2 font-semibold" />
                   </div>
 
-                  {/* Row 8: Referral Source (Full Width) */}
                   <div className="col-span-2">
                     <label className="block text-gray-700 mb-1">Select Referral Source</label>
-                    <select
-                      value={referral}
-                      onChange={(e) => setReferral(e.target.value)}
-                      className="w-full border rounded-lg px-3 py-2"
-                    >
+                    <select value={referral} onChange={(e) => setReferral(e.target.value)} className="w-full border rounded-lg px-3 py-2">
                       <option value="">Select</option>
                       <option>Instagram</option>
                       <option>Facebook</option>
@@ -768,21 +848,13 @@ const WorkspacePricing = () => {
                     </select>
                   </div>
                 </div>
-                {/* END: Two-Column Clean Layout */}
-
 
                 <div className="flex justify-between mt-6">
-                  <button
-                    onClick={() => setStep(2)}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
-                  >
-                    « Back
-                  </button>
+                  <button onClick={() => setStep(2)} className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">« Back</button>
                   <button
                     onClick={() => {
                       const bookingData = {
-                        user_id: getUserId(),   // ⭐ ADDED — send logged in user_id
-
+                        user_id: getUserId(),
                         space_id: modalData.id,
                         workspace_title: modalData.title,
                         plan_type: modalData.planType,
@@ -803,7 +875,6 @@ const WorkspacePricing = () => {
                         terms_accepted: termsAccepted ? 1 : 0,
                       };
 
-
                       fetch("http://localhost/vayuhu_backend/add_workspace_booking.php", {
                         method: "POST",
                         headers: {
@@ -823,7 +894,6 @@ const WorkspacePricing = () => {
                         .catch((err) => {
                           toast.error("Error: " + err.message);
                         });
-
                     }}
                     className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
                   >
