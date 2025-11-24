@@ -27,15 +27,17 @@ const DAY_ABBREVIATIONS_MAP = {
 
 const generateTimeOptions = () => {
   const times = [];
-  for (let i = 8; i <= 20; i++) {
+  // Workspace hours 08:00 AM → 07:59 PM (so include 19 = 7 PM)
+  for (let i = 8; i <= 19; i++) {
     const hour = i % 12 === 0 ? 12 : i % 12;
-    const ampm = i < 12 || i === 24 ? "AM" : "PM";
+    const ampm = i < 12 ? "AM" : "PM";
     const timeValue = `${i.toString().padStart(2, "0")}:00`;
     const display = `${hour.toString().padStart(2, "0")}:00 ${ampm}`;
-    times.push({ value: timeValue, display: display });
+    times.push({ value: timeValue, display });
   }
   return times;
 };
+
 const TIME_OPTIONS = generateTimeOptions();
 
 const format24HourTo12Hour = (time24) => {
@@ -231,10 +233,9 @@ const WorkspacePricing = () => {
   useEffect(() => {
     if (modalData?.planType === "Hourly" && startTime) {
       const startHour = parseInt(startTime.split(":")[0]);
-      if (!endTime || parseInt(endTime.split(":")[0]) <= startHour) {
-        const nextHour = Math.min(20, startHour + 1);
-        setEndTime(`${nextHour.toString().padStart(2, "0")}:00`);
-      }
+      // Ensure the end time doesn't go beyond 7:59 PM (19:59)
+      const endHour = Math.min(19, startHour);
+      setEndTime(`${endHour.toString().padStart(2, "0")}:59`);
     }
   }, [startTime, modalData?.planType]);
 
@@ -337,15 +338,13 @@ const WorkspacePricing = () => {
       now.setHours(now.getHours() + (now.getMinutes() > 0 ? 1 : 0), 0, 0, 0);
       const h = now.getHours();
       setStartTime(`${h.toString().padStart(2, "0")}:00`);
-      setEndTime(
-        `${Math.min(20, h + 1)
-          .toString()
-          .padStart(2, "0")}:00`
-      );
+      const nextHour = Math.min(19, h + 1); // 7 PM = max hour
+      setEndTime(`${nextHour.toString().padStart(2, "0")}:59`);
     } else {
       setStartTime("08:00");
       setEndTime("20:00");
     }
+
     setNumAttendees(1);
   };
 
@@ -387,15 +386,13 @@ const WorkspacePricing = () => {
       now.setHours(now.getHours() + (now.getMinutes() > 0 ? 1 : 0), 0, 0, 0);
       const h = now.getHours();
       setStartTime(`${h.toString().padStart(2, "0")}:00`);
-      setEndTime(
-        `${Math.min(20, h + 1)
-          .toString()
-          .padStart(2, "0")}:00`
-      );
+      const nextHour = Math.min(19, h + 1); // 7 PM = max hour
+      setEndTime(`${nextHour.toString().padStart(2, "0")}:59`);
     } else {
       setStartTime("08:00");
       setEndTime("20:00");
     }
+
     setNumAttendees(1);
   };
 
@@ -606,7 +603,6 @@ const WorkspacePricing = () => {
                         </div>
                       </div>
 
-                      
                       {/* Row 4 → 7 front + 7 back */}
                       <div className="flex flex-col items-center gap-3">
                         <div className="flex justify-center gap-4">
@@ -737,17 +733,21 @@ const WorkspacePricing = () => {
                           <option value="" disabled>
                             Select Start Time
                           </option>
-                          {TIME_OPTIONS.slice(0, -1).map((t) => {
+                          {TIME_OPTIONS.map((t) => {
                             const now = new Date();
                             const currentTimeValue = `${now
                               .getHours()
                               .toString()
                               .padStart(2, "0")}:00`;
+
                             const isToday =
                               startDate ===
                               new Date().toISOString().split("T")[0];
+
+                            // Hide or disable times that are in the past for today's date
                             const isPast =
                               isToday && t.value <= currentTimeValue;
+
                             return (
                               <option
                                 key={t.value}
@@ -774,19 +774,36 @@ const WorkspacePricing = () => {
                           <option value="" disabled>
                             Select End Time
                           </option>
-                          {TIME_OPTIONS.slice(1).map((t) => {
+                          {(() => {
                             const startHour = startTime
                               ? parseInt(startTime.split(":")[0])
                               : -1;
-                            const optionHour = parseInt(t.value.split(":")[0]);
-                            return (
-                              optionHour > startHour && (
-                                <option key={t.value} value={t.value}>
-                                  {t.display}
-                                </option>
-                              )
-                            );
-                          })}
+
+                            // Workspace closes at 07:59 PM (19:59)
+                            const options = [];
+                            for (let i = startHour; i <= 19; i++) {
+                              if (i >= startHour) {
+                                const hour24 = i;
+                                const labelHour =
+                                  hour24 % 12 === 0 ? 12 : hour24 % 12;
+                                const ampm = hour24 < 12 ? "AM" : "PM";
+                                options.push({
+                                  value: `${hour24
+                                    .toString()
+                                    .padStart(2, "0")}:59`,
+                                  label: `${labelHour
+                                    .toString()
+                                    .padStart(2, "0")}:59 ${ampm}`,
+                                });
+                              }
+                            }
+
+                            return options.map((t) => (
+                              <option key={t.value} value={t.value}>
+                                {t.label}
+                              </option>
+                            ));
+                          })()}
                         </select>
                       </div>
                     </div>
