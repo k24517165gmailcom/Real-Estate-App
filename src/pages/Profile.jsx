@@ -1,7 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "../components/Layout";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Profile = () => {
+  // ✅ Existing States
   const [profilePic, setProfilePic] = useState(null);
   const [preview, setPreview] = useState(null);
   const [formData, setFormData] = useState({
@@ -12,6 +15,46 @@ const Profile = () => {
     address: "",
   });
 
+  const [loading, setLoading] = useState(true);
+  const API_BASE = "http://localhost/vayuhu_backend";
+
+  // ✅ Get logged-in user info
+  const user = JSON.parse(localStorage.getItem("user"));
+  const userId = user?.id;
+
+  // ✅ Fetch user data
+  useEffect(() => {
+    if (!userId) {
+      toast.error("User not logged in!");
+      setLoading(false);
+      return;
+    }
+
+    fetch(`${API_BASE}/get_user_profile.php?id=${userId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.user) {
+          const user = data.user;
+          setFormData({
+            name: user.name || "",
+            contact: user.phone || "",
+            email: user.email || "",
+            dob: user.dob || "1990-01-01",
+            address: user.address || "",
+          });
+          if (user.profile_pic) setPreview(user.profile_pic);
+        } else {
+          toast.error("Failed to fetch profile");
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching profile:", err);
+        toast.error("Error fetching profile");
+      })
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  // ✅ Handlers
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     setProfilePic(file);
@@ -23,33 +66,55 @@ const Profile = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log("Form Data:", formData);
-    console.log("Profile Pic:", profilePic);
+    if (!userId) {
+      toast.error("User not logged in!");
+      return;
+    }
 
-    alert("Profile saved successfully!");
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append("id", userId);
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("phone", formData.contact);
+      formDataToSend.append("dob", formData.dob);
+      formDataToSend.append("address", formData.address);
+      if (profilePic) formDataToSend.append("profilePic", profilePic);
 
-    // ✅ Reset form fields
-    setFormData({
-      name: "",
-      contact: "",
-      email: "",
-      dob: "1990-01-01",
-      address: "",
-    });
+      const response = await fetch(`${API_BASE}/update_user_profile.php`, {
+        method: "POST",
+        body: formDataToSend,
+      });
 
-    // ✅ Reset image preview and file
-    setProfilePic(null);
-    setPreview(null);
+      const result = await response.json();
 
-    // ✅ Reset file input manually
-    e.target.reset();
+      if (result.success) {
+        toast.success("Profile updated successfully!");
+        setProfilePic(null); // Keep form populated, only clear profilePic input
+      } else {
+        toast.error("Failed to update profile: " + result.message);
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Something went wrong!");
+    }
   };
+
+  if (loading) {
+    return (
+      <Layout>
+        <p className="text-center text-gray-600 mt-10">Loading profile...</p>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
+      {/* Toast container */}
+      <ToastContainer position="top-right" autoClose={3000} />
+
       <h1 className="text-2xl font-semibold mb-6 text-gray-800">User Profile</h1>
 
       <div className="bg-white rounded-2xl shadow p-6 mt-6">
@@ -64,7 +129,11 @@ const Profile = () => {
                 <img
                   src={preview}
                   alt="Profile Preview"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover cursor-pointer"
+                  onClick={() => {
+                    setPreview(null);
+                    setProfilePic(null);
+                  }}
                 />
               ) : (
                 <div className="flex items-center justify-center w-full h-full text-gray-400 text-sm">
@@ -127,9 +196,8 @@ const Profile = () => {
               type="email"
               name="email"
               value={formData.email}
-              onChange={handleChange}
-              placeholder="Enter Your Email Id"
-              className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-1 focus:ring-orange-500"
+              disabled
+              className="w-full border border-gray-300 rounded-md p-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none"
             />
           </div>
 
