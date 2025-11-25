@@ -413,7 +413,29 @@ const WorkspacePricing = () => {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         disabled={isDisabled}
-        title={isDisabled ? c.raw.availability_reason : "Available"}
+        title={
+          isDisabled
+            ? (() => {
+                const reason = c.raw.availability_reason || "";
+                const endDate = c.raw.end_date || "";
+                const endTime = c.raw.end_time || "";
+
+                // If both date and time exist (hourly)
+                if (
+                  endTime &&
+                  endDate === new Date().toISOString().split("T")[0]
+                ) {
+                  const [hour, minute] = endTime.split(":");
+                  const formattedHour = hour % 12 || 12;
+                  const ampm = hour >= 12 ? "PM" : "AM";
+                  return `Booked until ${formattedHour}:${minute} ${ampm} today`;
+                }
+
+                // Fallback to backend-provided reason (for daily/monthly)
+                return reason;
+              })()
+            : "Available"
+        }
         onClick={() => {
           if (!isDisabled) {
             setCodeSelectModal((prev) => ({
@@ -1213,14 +1235,40 @@ const WorkspacePricing = () => {
                         .then((res) => res.json())
                         .then((data) => {
                           if (data.success) {
-                            toast.success("Booking saved successfully!");
+                            toast.success("🎉 " + data.message, {
+                              icon: "✅",
+                              style: {
+                                background: "#e6ffed",
+                                color: "#256029",
+                              },
+                            });
                             setTimeout(() => resetState(), 1500);
                           } else {
-                            toast.error("Booking failed: " + data.message);
+                            // Show clean, friendly backend message
+                            toast.error(
+                              data.message || "Unable to complete booking.",
+                              {
+                                icon: "📅",
+                                style: {
+                                  background: "#fff5f5",
+                                  color: "#a94442",
+                                },
+                              }
+                            );
                           }
                         })
+
                         .catch((err) => {
-                          toast.error("Error: " + err.message);
+                          toast.error(
+                            "Something went wrong. Please try again later.",
+                            {
+                              icon: "⚠️",
+                              style: {
+                                background: "#fff5e6",
+                                color: "#8a6d3b",
+                              },
+                            }
+                          );
                         });
                     }}
                     className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
