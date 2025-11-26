@@ -17,6 +17,7 @@ import Profile from "./pages/Profile";
 import CompanyProfile from "./pages/CompanyProfile";
 import Reservations from "./pages/Reservations";
 import Visitors from "./pages/Visitors";
+import VisitorsList from "./pages/VisitorsList"; // ✅ NEW IMPORT
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // 🧑‍💼 Admin Layout + Login
@@ -63,8 +64,7 @@ import AdminSettings from "./pages/Admin/AdminSettings";
 
 // 📰 Blog Pages
 import BlogPage from "./pages/BlogPage";
-import BlogDetails from "./pages/BlogDetails"; // ✅ NEW IMPORT
-
+import BlogDetails from "./pages/BlogDetails";
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -75,6 +75,7 @@ const Layout = ({ children }) => {
     "/company-profile",
     "/reservations",
     "/visitors",
+    "/visitors-list", // ✅ ensure header hidden here too
     "/admin",
   ];
 
@@ -104,7 +105,7 @@ const App = () => {
           <Route path="/virtual" element={<VirtualOfficeServices />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/blog" element={<BlogPage />} />
-          <Route path="/blog/:id" element={<BlogDetails />} /> {/* ✅ NEW ROUTE */}
+          <Route path="/blog/:id" element={<BlogDetails />} />
 
           {/* 👤 User Dashboard Routes */}
           <Route
@@ -144,6 +145,15 @@ const App = () => {
             element={
               <ProtectedRoute>
                 <Visitors />
+              </ProtectedRoute>
+            }
+          />
+          {/* ✅ New Visitors List Route */}
+          <Route
+            path="/visitors-details"
+            element={
+              <ProtectedRoute>
+                <VisitorsList />
               </ProtectedRoute>
             }
           />
