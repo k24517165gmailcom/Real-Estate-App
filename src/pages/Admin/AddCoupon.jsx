@@ -19,6 +19,8 @@ const AddCoupon = () => {
     min_price: "",
     max_price: "",
     pack_type: "ALL Spaces",
+    email: "",
+    mobile: "",
   });
 
   // Handle Inputs
@@ -35,6 +37,14 @@ const AddCoupon = () => {
 
     if (!form.discount || isNaN(form.discount))
       return toast.error("Enter valid discount percentage");
+
+    if (form.user_type === "Particular User (Email)" && !form.email.trim()) {
+      return toast.error("Enter user's email ID");
+    }
+
+    if (form.user_type === "Particular User (Mobile)" && !form.mobile.trim()) {
+      return toast.error("Enter user's mobile number");
+    }
 
     return true;
   };
@@ -93,6 +103,7 @@ const AddCoupon = () => {
 
       {/* FORM */}
       <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6">
+        
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           {/* Coupon Code */}
@@ -107,7 +118,7 @@ const AddCoupon = () => {
             />
           </div>
 
-          {/* Valid Date Range */}
+          {/* Valid From / Valid To */}
           <div className="flex gap-4">
             <div className="w-full">
               <label className="block text-sm mb-1 font-medium">Valid From *</label>
@@ -142,10 +153,39 @@ const AddCoupon = () => {
               className="w-full border border-orange-400 rounded px-3 py-2"
             >
               <option>ALL Users</option>
-              <option>Registered Users</option>
-              <option>New Users</option>
+              <option>First Time Users</option>
+              <option>Particular User (Email)</option>
+              <option>Particular User (Mobile)</option>
             </select>
           </div>
+
+          {/* Show Email Input IF needed */}
+          {form.user_type === "Particular User (Email)" && (
+            <div>
+              <label className="block text-sm mb-1 font-medium">Enter User Email *</label>
+              <input
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                className="w-full border border-orange-400 rounded px-3 py-2"
+                placeholder="Enter Email ID"
+              />
+            </div>
+          )}
+
+          {/* Show Mobile Input IF needed */}
+          {form.user_type === "Particular User (Mobile)" && (
+            <div>
+              <label className="block text-sm mb-1 font-medium">Enter Mobile Number *</label>
+              <input
+                name="mobile"
+                value={form.mobile}
+                onChange={handleChange}
+                className="w-full border border-orange-400 rounded px-3 py-2"
+                placeholder="Enter Mobile No."
+              />
+            </div>
+          )}
 
           {/* Space Type */}
           <div>
@@ -157,10 +197,13 @@ const AddCoupon = () => {
               className="w-full border border-orange-400 rounded px-3 py-2"
             >
               <option>ALL Spaces</option>
+              <option>Workspace</option>
+              <option>Group Workspace</option>
+              <option>Team Lead Cubicle</option>
+              <option>Manager Cubicle</option>
+              <option>Video Conferencing</option>
               <option>Executive Cabin</option>
-              <option>Conference Room</option>
-              <option>Meeting Room</option>
-              <option>Dedicated Desk</option>
+              <option>CEO Cabin</option>
             </select>
           </div>
 
@@ -206,9 +249,12 @@ const AddCoupon = () => {
               className="w-full border border-orange-400 rounded px-3 py-2"
             >
               <option>ALL Spaces</option>
-              <option>Hourly</option>
-              <option>8 Hour</option>
-              <option>Monthly</option>
+              <option>Per Hour</option>
+              <option>Per Day</option>
+              <option>One Week</option>
+              <option>Two Week</option>
+              <option>Three Week</option>
+              <option>Per Month</option>
             </select>
           </div>
 
