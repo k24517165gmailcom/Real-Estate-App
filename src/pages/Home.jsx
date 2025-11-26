@@ -7,6 +7,9 @@ import Contact from "../components/Contact";
 import Footer from "../components/Footer";
 import WorkspacePricing from "../components/WorkspacePricing";
 
+// IMPORT THE PROMO COMPONENT
+import CoworkingPromo from "../components/CoworkingPromo";
+
 const Home = () => {
   const [showPopup, setShowPopup] = useState(false);
 
@@ -14,7 +17,6 @@ const Home = () => {
     const alreadyShown = sessionStorage.getItem("visitPopup");
 
     if (!alreadyShown) {
-      // 2-second delay
       const timer = setTimeout(() => {
         setShowPopup(true);
         sessionStorage.setItem("visitPopup", "true");
@@ -26,26 +28,40 @@ const Home = () => {
 
   return (
     <>
-      {/* POPUP */}
+      {/* ---------- POPUP MODAL ----------- */}
       {showPopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[9999]">
-          <div className="bg-white px-6 py-8 rounded-lg shadow-xl w-[90%] max-w-md text-center">
-            <h2 className="text-2xl font-bold mb-3">Welcome 🎉</h2>
-            <p className="text-gray-600 mb-4">
-              Thanks for visiting our website!
-            </p>
-
+        <div
+          className="
+            fixed inset-0 bg-black/60 
+            flex justify-center items-center 
+            z-[9999]
+          "
+        >
+          <div
+            className="
+              relative bg-white rounded-xl shadow-2xl 
+              max-w-4xl w-[95%] overflow-hidden
+            "
+          >
+            {/* Close Button */}
             <button
+              className="
+                absolute top-3 right-3 bg-black text-white 
+                w-8 h-8 rounded-full flex items-center 
+                justify-center text-lg
+              "
               onClick={() => setShowPopup(false)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
             >
-              Close
+              ✕
             </button>
+
+            {/* The Promo Component */}
+            <CoworkingPromo />
           </div>
         </div>
       )}
 
-      {/* PAGE CONTENT */}
+      {/* ---------- PAGE CONTENT ----------- */}
       <About />
       <WorkspacePricing />
       <Testimonials />
