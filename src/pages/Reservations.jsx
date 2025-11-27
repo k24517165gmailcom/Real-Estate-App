@@ -125,9 +125,9 @@ const Reservations = () => {
                       <td className="p-2 border">
                         <span
                           className={`px-2 py-1 rounded text-xs ${
-                            booking.status === "Confirmed"
+                            booking.status === "confirmed"
                               ? "bg-green-100 text-green-700"
-                              : booking.status === "Cancelled"
+                              : booking.status === "cancelled"
                               ? "bg-red-100 text-red-700"
                               : "bg-yellow-100 text-yellow-700"
                           }`}

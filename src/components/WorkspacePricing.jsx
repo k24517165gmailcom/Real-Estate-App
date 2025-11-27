@@ -1199,7 +1199,32 @@ const WorkspacePricing = () => {
                     « Back
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      // 🔹 Step 0 — Load Razorpay script dynamically before anything else
+                      const loadRazorpayScript = () => {
+                        return new Promise((resolve) => {
+                          if (window.Razorpay) {
+                            resolve(true);
+                            return;
+                          }
+                          const script = document.createElement("script");
+                          script.src =
+                            "https://checkout.razorpay.com/v1/checkout.js";
+                          script.onload = () => resolve(true);
+                          script.onerror = () => resolve(false);
+                          document.body.appendChild(script);
+                        });
+                      };
+
+                      const loaded = await loadRazorpayScript();
+                      if (!loaded) {
+                        toast.error(
+                          "Razorpay SDK failed to load. Check your internet connection."
+                        );
+                        return;
+                      }
+
+                      // 🧾 Your original code starts exactly as you had it
                       const bookingData = {
                         user_id: getUserId(),
                         space_id: modalData.id,
@@ -1222,53 +1247,80 @@ const WorkspacePricing = () => {
                         terms_accepted: termsAccepted ? 1 : 0,
                       };
 
+                      // 1️⃣ Create Razorpay Order
                       fetch(
-                        "http://localhost/vayuhu_backend/add_workspace_booking.php",
+                        "http://localhost/vayuhu_backend/create_razorpay_order.php",
                         {
                           method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                          },
-                          body: JSON.stringify(bookingData),
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            amount: bookingData.final_amount,
+                          }),
                         }
                       )
                         .then((res) => res.json())
                         .then((data) => {
-                          if (data.success) {
-                            toast.success("🎉 " + data.message, {
-                              icon: "✅",
-                              style: {
-                                background: "#e6ffed",
-                                color: "#256029",
-                              },
-                            });
-                            setTimeout(() => resetState(), 1500);
-                          } else {
-                            // Show clean, friendly backend message
-                            toast.error(
-                              data.message || "Unable to complete booking.",
-                              {
-                                icon: "📅",
-                                style: {
-                                  background: "#fff5f5",
-                                  color: "#a94442",
-                                },
-                              }
-                            );
-                          }
-                        })
+                          if (!data.success) throw new Error(data.message);
 
+                          const options = {
+                            key: data.key,
+                            amount: bookingData.final_amount * 100,
+                            currency: "INR",
+                            name: "Vayuhu Workspaces",
+                            description: `${modalData.title} Booking`,
+                            order_id: data.order_id,
+                            handler: function (response) {
+                              // 2️⃣ Verify payment on backend
+                              fetch(
+                                "http://localhost/vayuhu_backend/verify_payment.php",
+                                {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify(response),
+                                }
+                              )
+                                .then((res) => res.json())
+                                .then((verify) => {
+                                  if (verify.success) {
+                                    // 3️⃣ Add booking now
+                                    fetch(
+                                      "http://localhost/vayuhu_backend/add_workspace_booking.php",
+                                      {
+                                        method: "POST",
+                                        headers: {
+                                          "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify(bookingData),
+                                      }
+                                    )
+                                      .then((r) => r.json())
+                                      .then((result) => {
+                                        if (result.success) {
+                                          toast.success(
+                                            "🎉 Booking confirmed!"
+                                          );
+                                          setTimeout(() => resetState(), 2000);
+                                        } else {
+                                          toast.error(
+                                            result.message || "Booking failed"
+                                          );
+                                        }
+                                      });
+                                  } else {
+                                    toast.error("Payment verification failed!");
+                                  }
+                                });
+                            },
+                            theme: { color: "#F97316" },
+                          };
+
+                          const rzp = new window.Razorpay(options);
+                          rzp.open();
+                        })
                         .catch((err) => {
-                          toast.error(
-                            "Something went wrong. Please try again later.",
-                            {
-                              icon: "⚠️",
-                              style: {
-                                background: "#fff5e6",
-                                color: "#8a6d3b",
-                              },
-                            }
-                          );
+                          toast.error("Payment setup failed: " + err.message);
                         });
                     }}
                     className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
