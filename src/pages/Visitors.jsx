@@ -21,6 +21,36 @@ const Visitors = () => {
     reason: "",
   });
 
+  const [hasReservation, setHasReservation] = useState(false);
+
+  // ✅ Check if user has workspace bookings
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchReservations = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/get_workspace_bookings.php`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId }),
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.bookings) {
+          setHasReservation(data.bookings.length > 0);
+        } else {
+          setHasReservation(false);
+        }
+      } catch (err) {
+        console.error("Error fetching reservations:", err);
+        setHasReservation(false);
+      }
+    };
+
+    fetchReservations();
+  }, [userId]);
+
   // ✅ Fetch company name automatically
   useEffect(() => {
     if (!userId) return;
@@ -40,18 +70,24 @@ const Visitors = () => {
       .catch(() => toast.error("Error fetching company name"));
   }, [userId]);
 
-  // ✅ Handle changes
+  // ✅ Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ✅ Handle submit
+  // ✅ Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.name || !formData.contact) {
       toast.error("Name and Contact No are required!");
+      return;
+    }
+
+    // ✅ Make Visiting Date & Time mandatory always
+    if (!formData.visitingDate || !formData.visitingTime) {
+      toast.error("Visiting Date and Time are required!");
       return;
     }
 
@@ -144,7 +180,7 @@ const Visitors = () => {
             />
           </div>
 
-          {/* Company Name (Auto-filled, readonly) */}
+          {/* Company Name (readonly) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Company Name
@@ -158,33 +194,40 @@ const Visitors = () => {
             />
           </div>
 
-          {/* Visiting Date */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Visiting Date
-            </label>
-            <input
-              type="date"
-              name="visitingDate"
-              value={formData.visitingDate}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
-          </div>
+          {/* Visiting Date & Time only if user has reservation */}
+          {hasReservation && (
+            <>
+              {/* Visiting Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Visiting Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="visitingDate"
+                  value={formData.visitingDate}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-md p-2 focus:ring-orange-500"
+                  required
+                />
+              </div>
 
-          {/* Visiting Time */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Visiting Time
-            </label>
-            <input
-              type="time"
-              name="visitingTime"
-              value={formData.visitingTime}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
-          </div>
+              {/* Visiting Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Visiting Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="time"
+                  name="visitingTime"
+                  value={formData.visitingTime}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-md p-2 focus:ring-orange-500"
+                  required
+                />
+              </div>
+            </>
+          )}
 
           {/* Reason */}
           <div className="sm:col-span-2">
