@@ -293,16 +293,24 @@ const WorkspacePricing = () => {
       return;
     }
 
+    // Normalize planType for consistent capitalization
+    const normalizedPlan =
+      planType.toLowerCase() === "hourly"
+        ? "Hourly"
+        : planType.toLowerCase() === "daily"
+        ? "Daily"
+        : "Monthly";
+
     // If group has more than one code, open the small code selection modal (radio)
     if (group.items.length > 1) {
       setCodeSelectModal({
         groupTitle: group.title,
         codes: group.items, // [{id, code, raw}]
-        planType,
+        planType: normalizedPlan,
         price:
-          planType === "Hourly"
+          normalizedPlan === "Hourly"
             ? group.hourly
-            : planType === "Daily"
+            : normalizedPlan === "Daily"
             ? group.daily
             : group.monthly,
       });
@@ -312,18 +320,18 @@ const WorkspacePricing = () => {
     // else (only one space code) proceed directly with selecting that workspace
     const sole = group.items[0];
     const chosenRaw = sole.raw;
-    // build modalData identical to previous flow
+
     setModalData({
       id: sole.id,
       title: group.title,
       desc: group.desc,
       type: sole.code,
       capacity: group.capacity,
-      planType: planType.charAt(0).toUpperCase() + planType.slice(1),
+      planType: normalizedPlan,
       price:
-        planType === "Hourly"
+        normalizedPlan === "Hourly"
           ? group.hourly
-          : planType === "Daily"
+          : normalizedPlan === "Daily"
           ? group.daily
           : group.monthly,
       raw: chosenRaw,
@@ -333,7 +341,8 @@ const WorkspacePricing = () => {
     setStartDate(new Date().toISOString().split("T")[0]);
     setEndDate("");
     setStep(1);
-    if (planType === "hourly") {
+
+    if (normalizedPlan === "Hourly") {
       const now = new Date();
       now.setHours(now.getHours() + (now.getMinutes() > 0 ? 1 : 0), 0, 0, 0);
       const h = now.getHours();
@@ -358,17 +367,25 @@ const WorkspacePricing = () => {
       return;
     }
 
+    // Normalize planType for consistent capitalization
+    const normalizedPlan =
+      planType.toLowerCase() === "hourly"
+        ? "Hourly"
+        : planType.toLowerCase() === "daily"
+        ? "Daily"
+        : "Monthly";
+
     setModalData({
       id: found.id,
       title: found.title,
       desc: found.desc,
       type: found.type,
       capacity: found.capacity,
-      planType: planType.charAt(0).toUpperCase() + planType.slice(1),
+      planType: normalizedPlan,
       price:
-        planType === "hourly"
+        normalizedPlan === "Hourly"
           ? found.hourly
-          : planType === "daily"
+          : normalizedPlan === "Daily"
           ? found.daily
           : found.monthly,
       raw: found.raw,
@@ -381,7 +398,8 @@ const WorkspacePricing = () => {
     setStartDate(new Date().toISOString().split("T")[0]);
     setEndDate("");
     setStep(1);
-    if (planType === "hourly") {
+
+    if (normalizedPlan === "Hourly") {
       const now = new Date();
       now.setHours(now.getHours() + (now.getMinutes() > 0 ? 1 : 0), 0, 0, 0);
       const h = now.getHours();
@@ -1200,6 +1218,28 @@ const WorkspacePricing = () => {
                   </button>
                   <button
                     onClick={async () => {
+                      // 🟢 Step 0 — Check workspace availability before payment
+                      const availabilityResponse = await fetch(
+                        "http://localhost/vayuhu_backend/check_workspace_availability.php",
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            space_id: modalData.id,
+                            plan_type: modalData.planType.toLowerCase(),
+                            start_date: startDate,
+                            end_date: endDate,
+                            start_time: startTime,
+                            end_time: endTime,
+                          }),
+                        }
+                      ).then((res) => res.json());
+
+                      if (!availabilityResponse.success) {
+                        toast.error(availabilityResponse.message);
+                        return; // ⛔ stop before payment
+                      }
+
                       // 🔹 Step 0 — Load Razorpay script dynamically before anything else
                       const loadRazorpayScript = () => {
                         return new Promise((resolve) => {
