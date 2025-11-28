@@ -1303,10 +1303,12 @@ const WorkspacePricing = () => {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl text-center relative"
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
+              className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl relative text-center"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
             >
+              {/* ✕ Close Button */}
               <button
                 onClick={() => setShowQRModal(null)}
                 className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-2xl"
@@ -1314,71 +1316,103 @@ const WorkspacePricing = () => {
                 ✕
               </button>
 
-              <h3 className="text-xl font-semibold mb-4 text-gray-800">
-                Scan & Pay ₹{showQRModal.amount}
-              </h3>
+              {/* Header - Orange Bar */}
+              <div className="bg-[#F36F21] text-white rounded-t-xl px-6 py-3 flex justify-between items-center">
+                <div className="text-left">
+                  <p className="font-semibold text-lg">Bank of Baroda</p>
+                  <p className="text-sm opacity-90">bob World Merchant</p>
+                </div>
+                <div className="text-right font-semibold text-white text-lg tracking-wide">
+                  UPI
+                </div>
+              </div>
 
-              <img
-                src={showQRModal.qrUrl}
-                alt="UPI QR Code"
-                className="mx-auto w-64 h-64 mb-4 rounded-lg shadow"
-              />
-              
+              {/* QR Section */}
+              <div className="bg-white px-6 py-8 shadow-inner rounded-b-xl">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                  Scan & Pay ₹{showQRModal.amount}
+                </h3>
+                <img
+                  src={showQRModal.qrUrl}
+                  alt="UPI QR Code"
+                  className="mx-auto w-52 h-52 rounded-lg border border-gray-300 shadow-md mb-3"
+                />
 
-              <p className="text-sm text-gray-600 mb-4">
-                Scan this QR with any UPI app (GPay, PhonePe, Paytm)
-                <br />
-                <span className="font-medium text-orange-500">
-                  {showQRModal.upiUrl}
-                </span>
-              </p>
+                {/* Business Info */}
+                <div className="text-gray-800 font-semibold mb-1">
+                  VAYUHU SOLUTIONS PRIVATE LIMITED
+                </div>
+                <div className="text-gray-600 text-sm mb-4">
+                  UPI ID:{" "}
+                  <span className="text-orange-600 font-medium">
+                    vayuh95388399@barodampay
+                  </span>
+                </div>
 
-              <label className="block text-gray-700 mb-2">
-                Transaction ID (UTR)
-              </label>
-              <input
-                type="text"
-                value={transactionId}
-                onChange={(e) => setTransactionId(e.target.value)}
-                placeholder="Enter UPI Transaction ID"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4"
-              />
+                {/* Transaction Input 
+                <label className="block text-gray-700 mb-2 font-medium">
+                  Enter Transaction ID (UTR)
+                </label>
+                <input
+                  type="text"
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value)}
+                  placeholder="Enter UPI Transaction ID"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4 focus:ring-2 focus:ring-orange-400 outline-none"
+                />
 
-              <button
-                disabled={!transactionId}
-                onClick={async () => {
-                  const res = await fetch(
-                    "http://localhost/vayuhu_backend/add_workspace_booking.php",
-                    {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        ...showQRModal.bookingData,
-                        payment_mode: "UPI_QR",
-                        transaction_id: transactionId,
-                        payment_status: "Pending",
-                      }),
+                {/* Confirm Button
+                <button
+                  disabled={!transactionId}
+                  onClick={async () => {
+                    const res = await fetch(
+                      "http://localhost/vayuhu_backend/add_workspace_booking.php",
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          ...showQRModal.bookingData,
+                          payment_mode: "UPI_QR",
+                          transaction_id: transactionId,
+                          payment_status: "Pending",
+                        }),
+                      }
+                    ).then((r) => r.json());
+
+                    if (res.success) {
+                      toast.success(
+                        "Booking recorded — pending payment verification!"
+                      );
+                      setShowQRModal(null);
+                      resetState();
+                    } else {
+                      toast.error(res.message || "Failed to record booking");
                     }
-                  ).then((r) => r.json());
+                  }}
+                  className={`w-full py-2 rounded-lg font-semibold transition-all ${
+                    transactionId
+                      ? "bg-orange-500 text-white hover:bg-orange-600"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  Confirm Payment
+                </button> */}
 
-                  if (res.success) {
-                    toast.success(
-                      "Booking recorded — pending payment verification!"
-                    );
-                    setShowQRModal(null);
-                    resetState();
-                  } else {
-                    toast.error(res.message || "Failed to record booking");
-                  }
-                }}
-                className={`w-full py-2 rounded-lg font-medium transition ${
-                  transactionId
-                    ? "bg-orange-500 text-white hover:bg-orange-600"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-              >
-                Confirm Payment
-              </button>
+                {/* Footer
+                <div className="mt-5 border-t border-gray-300 pt-3 text-center text-sm text-gray-600">
+                  <div className="text-orange-600 font-bold text-base flex justify-center items-center gap-1">
+                    <span>G20</span>
+                    <img
+                      src="https://upload.wikimedia.org/wikipedia/en/6/6a/G20_Logo_India_2023.svg"
+                      alt="G20 Logo"
+                      className="h-5"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    One Earth • One Family • One Future
+                  </p>
+                </div> */}
+              </div>
             </motion.div>
           </motion.div>
         )}
