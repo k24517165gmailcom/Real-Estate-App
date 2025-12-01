@@ -240,14 +240,37 @@ const WorkspacePricing = () => {
   }, [startTime, modalData?.planType]);
 
   // Coupons
-  const handleApplyCoupon = () => {
-    if (coupon.trim().toLowerCase() === "vayuhu10") {
-      setDiscount(10);
-      toast.success("Coupon applied! You got ₹10 off!");
-    } else {
-      toast.error("Invalid coupon code");
+  const handleApplyCoupon = async () => {
+    if (!coupon) return toast.error("Please enter a coupon code");
+
+    try {
+      const res = await fetch(
+        "http://localhost/vayuhu_backend/apply_coupon.php",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            coupon_code: coupon,
+            workspace_title: modalData?.title,
+            plan_type: modalData?.planType,
+            total_amount: calculateBaseAmount(),
+            user_id: getUserId(),
+          }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (data.success) {
+        setDiscount(Number(data.discount_amount || 0));
+        toast.success(data.message || "Coupon applied successfully!");
+      } else {
+        setDiscount(0);
+        toast.error(data.message || "Invalid coupon code");
+      }
+    } catch (err) {
+      toast.error("Error validating coupon. Please try again.");
     }
-    setCoupon("");
   };
 
   // Billing calculations (same)
