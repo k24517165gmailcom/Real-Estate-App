@@ -1236,7 +1236,19 @@ const WorkspacePricing = () => {
                       ).then((res) => res.json());
 
                       if (!availabilityResponse.success) {
-                        toast.error(availabilityResponse.message);
+                        // 🧠 If backend sends available slots, show them in a friendly way
+                        if (availabilityResponse.available_slots?.length) {
+                          const slots = availabilityResponse.available_slots
+                            .map((slot) => `• ${slot}`)
+                            .join("\n");
+
+                          toast.error(
+                            `${availabilityResponse.message}\n\nAvailable Slots:\n${slots}`,
+                            { autoClose: 5000 }
+                          );
+                        } else {
+                          toast.error(availabilityResponse.message);
+                        }
                         return; // ⛔ stop before payment
                       }
 
