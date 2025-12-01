@@ -1204,7 +1204,7 @@ const WorkspacePricing = () => {
                       <option>Instagram</option>
                       <option>Facebook</option>
                       <option>Google</option>
-                      <option>Friend</option>
+                      <option>friend</option>
                     </select>
                   </div>
                 </div>
