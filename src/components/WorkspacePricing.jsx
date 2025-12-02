@@ -1373,9 +1373,64 @@ const WorkspacePricing = () => {
                                       .then((r) => r.json())
                                       .then((result) => {
                                         if (result.success) {
+                                          // ✅ Show toast immediately
                                           toast.success(
-                                            "🎉 Booking confirmed!"
+                                            "🎉 Booking confirmed! Sending confirmation email..."
                                           );
+
+                                          // 📨 Trigger backend email
+                                          fetch(
+                                            "http://localhost/vayuhu_backend/send_booking_email.php",
+                                            {
+                                              method: "POST",
+                                              headers: {
+                                                "Content-Type":
+                                                  "application/json",
+                                              },
+                                              body: JSON.stringify({
+                                                user_id: getUserId(),
+                                                user_email:
+                                                  JSON.parse(
+                                                    localStorage.getItem("user")
+                                                  )?.email || "",
+                                                workspace_title:
+                                                  modalData.title,
+                                                plan_type: modalData.planType,
+                                                start_date: startDate,
+                                                end_date: endDate,
+                                                start_time: startTime,
+                                                end_time: endTime,
+                                                total_amount: finalTotal,
+                                                coupon_code: coupon || null,
+                                                referral_source:
+                                                  referral || null,
+                                              }),
+                                            }
+                                          )
+                                            .then((res) => res.json())
+                                            .then((emailRes) => {
+                                              if (emailRes.success) {
+                                                toast.success(
+                                                  "📧 Confirmation email sent!"
+                                                );
+                                              } else {
+                                                toast.warn(
+                                                  "Booking saved, but email failed: " +
+                                                    emailRes.message
+                                                );
+                                              }
+                                            })
+                                            .catch((err) => {
+                                              console.error(
+                                                "Email error:",
+                                                err
+                                              );
+                                              toast.warn(
+                                                "Booking saved, but email sending failed."
+                                              );
+                                            });
+
+                                          // ✅ Reset after short delay
                                           setTimeout(() => resetState(), 2000);
                                         } else {
                                           toast.error(
