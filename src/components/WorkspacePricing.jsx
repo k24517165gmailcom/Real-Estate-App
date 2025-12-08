@@ -3,6 +3,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useCart } from "../context/CartContext";
+import CartDrawer from "../components/CartDrawer";
+import FloatingCartButton from "../components/FloatingCartButton";
 
 // Helper to get logged-in user id (same as yours)
 const getUserId = () => {
@@ -133,6 +136,9 @@ const WorkspacePricing = () => {
   // NEW: data for the small radio popup to pick a space code
   const [codeSelectModal, setCodeSelectModal] = useState(null);
   // structure: { groupTitle, codes: [{id, code, raw}], planType, price }
+
+  const { addToCart } = useCart();
+  const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
     fetch("http://localhost/vayuhu_backend/get_spaces.php")
@@ -1239,6 +1245,32 @@ const WorkspacePricing = () => {
                   >
                     « Back
                   </button>
+
+                  {/* 🛒 Add to Cart Button */}
+                  <button
+                    onClick={() => {
+                      const bookingItem = {
+                        id: modalData.id,
+                        title: modalData.title,
+                        plan_type: modalData.planType,
+                        start_date: startDate,
+                        end_date: endDate,
+                        start_time: startTime,
+                        end_time: endTime,
+                        total_days: days,
+                        total_hours: totalHours,
+                        num_attendees: numAttendees,
+                        final_amount: parseFloat(finalTotal),
+                      };
+                      addToCart(bookingItem);
+                      toast.success("✅ Added to cart!");
+                      resetState();
+                    }}
+                    className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                  >
+                    Add to Cart
+                  </button>
+
                   <button
                     onClick={async () => {
                       // 🟢 Step 0 — Check workspace availability before payment
@@ -1463,6 +1495,17 @@ const WorkspacePricing = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <CartDrawer
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        onCheckout={() => {
+          // 🔸 Optional: call your Razorpay logic for totalAmount
+          toast.info("Proceeding to checkout...");
+        }}
+      />
+
+      <FloatingCartButton onClick={() => setCartOpen(true)} />
     </section>
   );
 };
