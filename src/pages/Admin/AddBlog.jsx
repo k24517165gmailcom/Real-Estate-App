@@ -21,6 +21,16 @@ const AddBlog = () => {
   const [preview, setPreview] = useState(null);
 
   // -------------------------
+  // ✅ Fetch User Info from LocalStorage (for added_by)
+  // -------------------------
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user && user.name) {
+      setForm((prev) => ({ ...prev, added_by: user.name }));
+    }
+  }, []);
+
+  // -------------------------
   // Handle Normal Input
   // -------------------------
   const handleChange = (e) => {
@@ -62,18 +72,24 @@ const AddBlog = () => {
     if (!form.blog_description.trim())
       return toast.error("Blog Description is required");
     if (!image) return toast.error("Please upload a blog image");
-
     return true;
   };
 
   // -------------------------
-  // Submit Handler
+  // ✅ Submit Handler (with JWT Authorization)
   // -------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     setLoading(true);
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("You must be logged in to add a blog.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const payload = new FormData();
@@ -84,6 +100,9 @@ const AddBlog = () => {
 
       const res = await fetch(`${API_URL}/add_blog.php`, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`, // ✅ Send JWT Token
+        },
         body: payload,
       });
 
@@ -122,15 +141,10 @@ const AddBlog = () => {
       </div>
 
       {/* FORM */}
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white shadow-sm rounded-lg p-6"
-      >
+      <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
           {/* LEFT SIDE (Fields) */}
           <div className="lg:col-span-2 space-y-6">
-
             {/* Adding By */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -142,6 +156,7 @@ const AddBlog = () => {
                 onChange={handleChange}
                 className="w-full border border-orange-400 rounded px-3 py-2"
                 placeholder="Enter Your Name..."
+                 // ✅ Optional: Prevent editing if filled automatically
               />
             </div>
 
@@ -179,7 +194,6 @@ const AddBlog = () => {
 
           {/* RIGHT SIDE (Image + Submit) */}
           <div className="space-y-6 flex flex-col items-center">
-
             {/* Image Preview */}
             <div className="w-full flex justify-center mt-2">
               <div className="p-2 border border-orange-300 rounded-lg bg-orange-50 shadow-sm">
@@ -220,7 +234,6 @@ const AddBlog = () => {
                 {loading ? "Saving..." : "Submit"}
               </button>
             </div>
-
           </div>
         </div>
       </form>

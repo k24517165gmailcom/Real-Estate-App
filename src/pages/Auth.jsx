@@ -20,6 +20,8 @@ const Auth = () => {
 
     const payload = { email, password, ...(isLogin ? {} : { name }) };
 
+    console.log("Submitting auth form:", payload);
+
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -27,12 +29,24 @@ const Auth = () => {
         body: JSON.stringify(payload),
       });
 
+      console.log("Raw response:", response);
+
       const result = await response.json();
+      console.log("Parsed response:", result);
       setMessage(result.message);
 
       if (result.status === "success" && result.user) {
+        // ✅ Save JWT token
+        if (result.token) {
+          localStorage.setItem("token", result.token);
+          console.log("JWT token saved:", result.token);
+        }
+
         localStorage.setItem("user", JSON.stringify(result.user));
+        console.log("User info saved:", result.user);
+
         window.dispatchEvent(new Event("userUpdated"));
+
         setTimeout(() => navigate("/dashboard"), 800);
       }
     } catch (error) {
@@ -41,48 +55,61 @@ const Auth = () => {
     }
   };
 
+  // ✅ Example: Using token for a protected route
+  const checkProtected = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.log("No token found in localStorage");
+      return;
+    }
+
+    console.log("Using token for protected route:", token);
+
+    try {
+      const res = await fetch("http://localhost/vayuhu_backend/protected.php", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      console.log("Protected route data:", data);
+    } catch (err) {
+      console.error("Error accessing protected route:", err);
+    }
+  };
+
   useEffect(() => {
     window.scrollTo({ top: 700, behavior: "smooth" });
+    checkProtected();
   }, []);
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 overflow-hidden">
-
-      {/* -------- BACKGROUND FLOATING SHAPES -------- */}
-
+      {/* BACKGROUND SHAPES */}
       <div className="absolute top-[-150px] right-[-120px] w-[350px] h-[350px] bg-orange-300 rounded-full blur-3xl opacity-40 animate-pulse"></div>
-
       <div className="absolute bottom-[-130px] left-[-80px] w-[300px] h-[140px] bg-orange-400 opacity-20 blur-xl rotate-anim rounded-2xl"></div>
-
-      <div className="absolute top-[180px] left-[80px] w-0 h-0 
+      <div
+        className="absolute top-[180px] left-[80px] w-0 h-0 
         border-l-[70px] border-l-transparent 
         border-r-[70px] border-r-transparent 
-        border-b-[120px] border-b-orange-400 opacity-30 float-anim"></div>
-
-      {/* Floating dots */}
+        border-b-[120px] border-b-orange-400 opacity-30 float-anim"
+      ></div>
       <div className="absolute bottom-[100px] right-[60px] grid grid-cols-4 gap-3 opacity-40 float-anim">
         {[...Array(12)].map((_, i) => (
           <span key={i} className="w-3 h-3 bg-orange-300 rounded-full"></span>
         ))}
       </div>
-
-      {/* Small floating circle */}
       <div className="absolute top-[260px] right-[180px] w-16 h-16 bg-orange-300 rounded-full opacity-40 rotate-anim"></div>
 
-      {/* -------- BRAND LOGO -------- */}
+      {/* BRAND LOGO */}
       <div className="absolute top-14 flex flex-col items-center z-20 animate-fadein">
         <img
           src={assets.brandLogo}
           alt="Brand Logo"
           className="w-28 h-28 object-contain drop-shadow-xl animate-pop"
         />
-
       </div>
 
-
-      {/* -------- AUTH CARD -------- */}
+      {/* AUTH CARD */}
       <div className="relative bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-xl w-96 z-10 border border-orange-100">
-
         <h2 className="text-2xl font-semibold text-center mb-6 text-gray-800">
           {isLogin ? "Welcome Back 👋" : "Create Your Account ✨"}
         </h2>
@@ -145,7 +172,7 @@ const Auth = () => {
         </p>
       </div>
 
-      {/* ------ EXTRA ANIMATIONS (CSS) ------ */}
+      {/* EXTRA ANIMATIONS */}
       <style>{`
         .float-anim { animation: float 6s ease-in-out infinite; }
         .rotate-anim { animation: rotate 12s linear infinite; }

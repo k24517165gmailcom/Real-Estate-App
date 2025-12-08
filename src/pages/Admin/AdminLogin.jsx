@@ -7,13 +7,14 @@ const AdminLogin = () => {
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
-  // ✅ Admin login only (no signup toggle)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
 
-    const url = "http://localhost/vayuhu_backend/admin_login.php"; // ⚙️ your admin login endpoint
+    const url = "http://localhost/vayuhu_backend/admin_login.php";
     const payload = { email, password };
+
+    console.log("Submitting admin login form:", payload); // ✅ debug
 
     try {
       const response = await fetch(url, {
@@ -22,14 +23,24 @@ const AdminLogin = () => {
         body: JSON.stringify(payload),
       });
 
+      console.log("Raw response:", response);
+
       const result = await response.json();
+      console.log("Parsed response:", result);
+
       setMessage(result.message);
 
       if (result.status === "success" && result.admin) {
+        // ✅ Save JWT token
+        if (result.token) {
+          localStorage.setItem("token", result.token);
+          console.log("Saved JWT token:", result.token);
+        }
+
         // ✅ Save admin info
         localStorage.setItem("admin", JSON.stringify(result.admin));
 
-        // Optional: event listener for reactivity
+        // Optional: trigger reactivity elsewhere
         window.dispatchEvent(new Event("adminUpdated"));
 
         // ✅ Navigate to admin dashboard
@@ -41,7 +52,6 @@ const AdminLogin = () => {
     }
   };
 
-  // Optional scroll animation
   useEffect(() => {
     window.scrollTo({ top: 700, behavior: "smooth" });
   }, []);
@@ -81,7 +91,9 @@ const AdminLogin = () => {
           {message && (
             <p
               className={`mt-4 text-center text-sm font-medium ${
-                message.includes("success") ? "text-green-600" : "text-red-500"
+                message.toLowerCase().includes("success")
+                  ? "text-green-600"
+                  : "text-red-500"
               }`}
             >
               {message}
