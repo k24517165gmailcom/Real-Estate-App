@@ -130,10 +130,6 @@ const WorkspacePricing = () => {
   const [totalHours, setTotalHours] = useState(1);
   const [numAttendees, setNumAttendees] = useState(1);
 
-  // 🧾 Add here (below all other states)
-  const [showQRModal, setShowQRModal] = useState(null);
-  const [transactionId, setTransactionId] = useState("");
-
   // NEW: data for the small radio popup to pick a space code
   const [codeSelectModal, setCodeSelectModal] = useState(null);
   // structure: { groupTitle, codes: [{id, code, raw}], planType, price }
@@ -244,14 +240,37 @@ const WorkspacePricing = () => {
   }, [startTime, modalData?.planType]);
 
   // Coupons
-  const handleApplyCoupon = () => {
-    if (coupon.trim().toLowerCase() === "vayuhu10") {
-      setDiscount(10);
-      toast.success("Coupon applied! You got ₹10 off!");
-    } else {
-      toast.error("Invalid coupon code");
+  const handleApplyCoupon = async () => {
+    if (!coupon) return toast.error("Please enter a coupon code");
+
+    try {
+      const res = await fetch(
+        "http://localhost/vayuhu_backend/apply_coupon.php",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            coupon_code: coupon,
+            workspace_title: modalData?.title,
+            plan_type: modalData?.planType,
+            total_amount: calculateBaseAmount(),
+            user_id: getUserId(),
+          }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (data.success) {
+        setDiscount(Number(data.discount_amount || 0));
+        toast.success(data.message || "Coupon applied successfully!");
+      } else {
+        setDiscount(0);
+        toast.error(data.message || "Invalid coupon code");
+      }
+    } catch (err) {
+      toast.error("Error validating coupon. Please try again.");
     }
-    setCoupon("");
   };
 
   // Billing calculations (same)
@@ -1208,7 +1227,7 @@ const WorkspacePricing = () => {
                       <option>Instagram</option>
                       <option>Facebook</option>
                       <option>Google</option>
-                      <option>Friend</option>
+                      <option>friend</option>
                     </select>
                   </div>
                 </div>
@@ -1222,7 +1241,7 @@ const WorkspacePricing = () => {
                   </button>
                   <button
                     onClick={async () => {
-                      // 🟢 Step 0 — Check workspace availability before showing QR
+                      // 🟢 Step 0 — Check workspace availability before payment
                       const availabilityResponse = await fetch(
                         "http://localhost/vayuhu_backend/check_workspace_availability.php",
                         {
@@ -1240,11 +1259,47 @@ const WorkspacePricing = () => {
                       ).then((res) => res.json());
 
                       if (!availabilityResponse.success) {
-                        toast.error(availabilityResponse.message);
+                        // 🧠 If backend sends available slots, show them in a friendly way
+                        if (availabilityResponse.available_slots?.length) {
+                          const slots = availabilityResponse.available_slots
+                            .map((slot) => `• ${slot}`)
+                            .join("\n");
+
+                          toast.error(
+                            `${availabilityResponse.message}\n\nAvailable Slots:\n${slots}`,
+                            { autoClose: 5000 }
+                          );
+                        } else {
+                          toast.error(availabilityResponse.message);
+                        }
+                        return; // ⛔ stop before payment
+                      }
+
+                      // 🔹 Step 0 — Load Razorpay script dynamically before anything else
+                      const loadRazorpayScript = () => {
+                        return new Promise((resolve) => {
+                          if (window.Razorpay) {
+                            resolve(true);
+                            return;
+                          }
+                          const script = document.createElement("script");
+                          script.src =
+                            "https://checkout.razorpay.com/v1/checkout.js";
+                          script.onload = () => resolve(true);
+                          script.onerror = () => resolve(false);
+                          document.body.appendChild(script);
+                        });
+                      };
+
+                      const loaded = await loadRazorpayScript();
+                      if (!loaded) {
+                        toast.error(
+                          "Razorpay SDK failed to load. Check your internet connection."
+                        );
                         return;
                       }
 
-                      // 🧾 Step 1 — Prepare booking data
+                      // 🧾 Your original code starts exactly as you had it
                       const bookingData = {
                         user_id: getUserId(),
                         space_id: modalData.id,
@@ -1267,23 +1322,136 @@ const WorkspacePricing = () => {
                         terms_accepted: termsAccepted ? 1 : 0,
                       };
 
-                      // 🟠 Step 2 — Request QR from backend
-                      const qrRes = await fetch(
-                        `http://localhost/vayuhu_backend/generate_qr.php?amount=${bookingData.final_amount}`
-                      ).then((r) => r.json());
+                      // 1️⃣ Create Razorpay Order
+                      fetch(
+                        "http://localhost/vayuhu_backend/create_razorpay_order.php",
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            amount: bookingData.final_amount,
+                          }),
+                        }
+                      )
+                        .then((res) => res.json())
+                        .then((data) => {
+                          if (!data.success) throw new Error(data.message);
 
-                      if (!qrRes.success) {
-                        toast.error("Failed to generate QR code");
-                        return;
-                      }
+                          const options = {
+                            key: data.key,
+                            amount: bookingData.final_amount * 100,
+                            currency: "INR",
+                            name: "Vayuhu Workspaces",
+                            description: `${modalData.title} Booking`,
+                            order_id: data.order_id,
+                            handler: function (response) {
+                              // 2️⃣ Verify payment on backend
+                              fetch(
+                                "http://localhost/vayuhu_backend/verify_payment.php",
+                                {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify(response),
+                                }
+                              )
+                                .then((res) => res.json())
+                                .then((verify) => {
+                                  if (verify.success) {
+                                    // 3️⃣ Add booking now
+                                    fetch(
+                                      "http://localhost/vayuhu_backend/add_workspace_booking.php",
+                                      {
+                                        method: "POST",
+                                        headers: {
+                                          "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify(bookingData),
+                                      }
+                                    )
+                                      .then((r) => r.json())
+                                      .then((result) => {
+                                        if (result.success) {
+                                          // ✅ Show toast immediately
+                                          toast.success(
+                                            "🎉 Booking confirmed! Sending confirmation email..."
+                                          );
 
-                      // 🟣 Step 3 — Open modal to display QR and collect UTR
-                      setShowQRModal({
-                        amount: bookingData.final_amount,
-                        qrUrl: qrRes.qr_image,
-                        upiUrl: qrRes.upi_url,
-                        bookingData,
-                      });
+                                          // 📨 Trigger backend email
+                                          fetch(
+                                            "http://localhost/vayuhu_backend/send_booking_email.php",
+                                            {
+                                              method: "POST",
+                                              headers: {
+                                                "Content-Type":
+                                                  "application/json",
+                                              },
+                                              body: JSON.stringify({
+                                                user_id: getUserId(),
+                                                user_email:
+                                                  JSON.parse(
+                                                    localStorage.getItem("user")
+                                                  )?.email || "",
+                                                workspace_title:
+                                                  modalData.title,
+                                                plan_type: modalData.planType,
+                                                start_date: startDate,
+                                                end_date: endDate,
+                                                start_time: startTime,
+                                                end_time: endTime,
+                                                total_amount: finalTotal,
+                                                coupon_code: coupon || null,
+                                                referral_source:
+                                                  referral || null,
+                                              }),
+                                            }
+                                          )
+                                            .then((res) => res.json())
+                                            .then((emailRes) => {
+                                              if (emailRes.success) {
+                                                toast.success(
+                                                  "📧 Confirmation email sent!"
+                                                );
+                                              } else {
+                                                toast.warn(
+                                                  "Booking saved, but email failed: " +
+                                                    emailRes.message
+                                                );
+                                              }
+                                            })
+                                            .catch((err) => {
+                                              console.error(
+                                                "Email error:",
+                                                err
+                                              );
+                                              toast.warn(
+                                                "Booking saved, but email sending failed."
+                                              );
+                                            });
+
+                                          // ✅ Reset after short delay
+                                          setTimeout(() => resetState(), 2000);
+                                        } else {
+                                          toast.error(
+                                            result.message || "Booking failed"
+                                          );
+                                        }
+                                      });
+                                  } else {
+                                    toast.error("Payment verification failed!");
+                                  }
+                                });
+                            },
+                            theme: { color: "#F97316" },
+                          };
+
+                          const rzp = new window.Razorpay(options);
+                          rzp.open();
+                        })
+                        .catch((err) => {
+                          toast.error("Payment setup failed: " + err.message);
+                        });
                     }}
                     className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
                   >
@@ -1292,128 +1460,6 @@ const WorkspacePricing = () => {
                 </div>
               </motion.div>
             )}
-          </motion.div>
-        )}
-
-        {showQRModal && (
-          <motion.div
-            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl relative text-center"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-            >
-              {/* ✕ Close Button */}
-              <button
-                onClick={() => setShowQRModal(null)}
-                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-2xl"
-              >
-                ✕
-              </button>
-
-              {/* Header - Orange Bar */}
-              <div className="bg-[#F36F21] text-white rounded-t-xl px-6 py-3 flex justify-between items-center">
-                <div className="text-left">
-                  <p className="font-semibold text-lg">Bank of Baroda</p>
-                  <p className="text-sm opacity-90">bob World Merchant</p>
-                </div>
-                <div className="text-right font-semibold text-white text-lg tracking-wide">
-                  UPI
-                </div>
-              </div>
-
-              {/* QR Section */}
-              <div className="bg-white px-6 py-8 shadow-inner rounded-b-xl">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                  Scan & Pay ₹{showQRModal.amount}
-                </h3>
-                <img
-                  src={showQRModal.qrUrl}
-                  alt="UPI QR Code"
-                  className="mx-auto w-52 h-52 rounded-lg border border-gray-300 shadow-md mb-3"
-                />
-
-                {/* Business Info */}
-                <div className="text-gray-800 font-semibold mb-1">
-                  VAYUHU SOLUTIONS PRIVATE LIMITED
-                </div>
-                <div className="text-gray-600 text-sm mb-4">
-                  UPI ID:{" "}
-                  <span className="text-orange-600 font-medium">
-                    vayuh95388399@barodampay
-                  </span>
-                </div>
-
-                {/* Transaction Input 
-                <label className="block text-gray-700 mb-2 font-medium">
-                  Enter Transaction ID (UTR)
-                </label>
-                <input
-                  type="text"
-                  value={transactionId}
-                  onChange={(e) => setTransactionId(e.target.value)}
-                  placeholder="Enter UPI Transaction ID"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4 focus:ring-2 focus:ring-orange-400 outline-none"
-                />
-
-                {/* Confirm Button
-                <button
-                  disabled={!transactionId}
-                  onClick={async () => {
-                    const res = await fetch(
-                      "http://localhost/vayuhu_backend/add_workspace_booking.php",
-                      {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          ...showQRModal.bookingData,
-                          payment_mode: "UPI_QR",
-                          transaction_id: transactionId,
-                          payment_status: "Pending",
-                        }),
-                      }
-                    ).then((r) => r.json());
-
-                    if (res.success) {
-                      toast.success(
-                        "Booking recorded — pending payment verification!"
-                      );
-                      setShowQRModal(null);
-                      resetState();
-                    } else {
-                      toast.error(res.message || "Failed to record booking");
-                    }
-                  }}
-                  className={`w-full py-2 rounded-lg font-semibold transition-all ${
-                    transactionId
-                      ? "bg-orange-500 text-white hover:bg-orange-600"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  }`}
-                >
-                  Confirm Payment
-                </button> */}
-
-                {/* Footer
-                <div className="mt-5 border-t border-gray-300 pt-3 text-center text-sm text-gray-600">
-                  <div className="text-orange-600 font-bold text-base flex justify-center items-center gap-1">
-                    <span>G20</span>
-                    <img
-                      src="https://upload.wikimedia.org/wikipedia/en/6/6a/G20_Logo_India_2023.svg"
-                      alt="G20 Logo"
-                      className="h-5"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    One Earth • One Family • One Future
-                  </p>
-                </div> */}
-              </div>
-            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

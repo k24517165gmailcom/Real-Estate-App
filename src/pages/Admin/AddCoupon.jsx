@@ -23,6 +23,9 @@ const AddCoupon = () => {
     mobile: "",
   });
 
+  // Today's date in YYYY-MM-DD
+  const today = new Date().toISOString().split("T")[0];
+
   // Handle Inputs
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -103,7 +106,6 @@ const AddCoupon = () => {
 
       {/* FORM */}
       <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6">
-        
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           {/* Coupon Code */}
@@ -127,6 +129,7 @@ const AddCoupon = () => {
                 name="valid_from"
                 value={form.valid_from}
                 onChange={handleChange}
+                min={today} // disable past dates
                 className="w-full border border-orange-400 rounded px-3 py-2"
               />
             </div>
@@ -138,6 +141,7 @@ const AddCoupon = () => {
                 name="valid_to"
                 value={form.valid_to}
                 onChange={handleChange}
+                min={form.valid_from || today} // cannot be before valid_from
                 className="w-full border border-orange-400 rounded px-3 py-2"
               />
             </div>
@@ -257,7 +261,6 @@ const AddCoupon = () => {
               <option>Per Month</option>
             </select>
           </div>
-
         </div>
 
         {/* Submit */}
