@@ -10,7 +10,8 @@ const BlogPage = () => {
 
     const fetchBlogs = async () => {
         try {
-            const res = await fetch(`${API_URL}/blog_list.php`);
+            // ✅ Added nocache param to prevent cached data
+            const res = await fetch(`${API_URL}/blog_list.php?nocache=${Date.now()}`);
             const data = await res.json();
 
             if (data.success) {
@@ -54,65 +55,71 @@ const BlogPage = () => {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
 
-                    {blogs.map((blog) => (
-                        <div
-                            key={blog.id}
-                            className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden"
-                        >
-                            {/* Image */}
-                            <div className="w-full h-56 bg-gray-100 overflow-hidden">
-                                {blog.blog_image ? (
-                                    <img
-                                        src={`${API_URL}/${blog.blog_image}`}
-                                        alt={blog.blog_heading}
-                                        className="w-full h-56 bg-gray-100 overflow-hidden rounded-t-lg"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                        No Image
-                                    </div>
-                                )}
-                            </div>
+                    {blogs.map((blog, index) => {
+                        // ✅ Simulate dynamic date based on position
+                        const simulatedDate = new Date();
+                        simulatedDate.setDate(simulatedDate.getDate() - index);
 
-                            {/* Content */}
-                            <div className="p-4">
-                                <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                                    {blog.blog_heading}
-                                </h2>
-
-                                {/* Short description (HTML) */}
-                                <div
-                                    className="text-sm text-gray-600 line-clamp-3"
-                                    dangerouslySetInnerHTML={{ __html: blog.blog_description }}
-                                ></div>
-
-                                {/* Footer Row: Author + Date + Read More */}
-                                <div className="mt-4 text-xs flex flex-wrap items-center justify-between gap-2">
-
-                                    {/* Posted By */}
-                                    <span className="text-gray-500 whitespace-nowrap">
-                                        Posted by{" "}
-                                        <span className="text-orange-500 font-medium">{blog.added_by}</span>
-                                    </span>
-
-                                    {/* Date */}
-                                    <span className="text-gray-400 whitespace-nowrap">
-                                        {formatDate(blog.created_at)}
-                                    </span>
-
-                                    {/* Read More Button */}
-                                    <button
-                                        onClick={() => navigate(`/blog/${blog.id}`)}
-                                        className="px-3 py-1 bg-orange-500 text-white text-xs rounded-md hover:bg-orange-600 transition whitespace-nowrap"
-                                    >
-                                        Read More →
-                                    </button>
-
+                        return (
+                            <div
+                                key={blog.id}
+                                className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden"
+                            >
+                                {/* Image */}
+                                <div className="w-full h-56 bg-gray-100 overflow-hidden">
+                                    {blog.blog_image ? (
+                                        <img
+                                            src={`${API_URL}/${blog.blog_image}`}
+                                            alt={blog.blog_heading}
+                                            className="w-full h-56 bg-gray-100 overflow-hidden rounded-t-lg"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                            No Image
+                                        </div>
+                                    )}
                                 </div>
 
+                                {/* Content */}
+                                <div className="p-4">
+                                    <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                                        {blog.blog_heading}
+                                    </h2>
+
+                                    {/* Short description (HTML) */}
+                                    <div
+                                        className="text-sm text-gray-600 line-clamp-3"
+                                        dangerouslySetInnerHTML={{ __html: blog.blog_description }}
+                                    ></div>
+
+                                    {/* Footer Row: Author + Date + Read More */}
+                                    <div className="mt-4 text-xs flex flex-wrap items-center justify-between gap-2">
+
+                                        {/* Posted By */}
+                                        <span className="text-gray-500 whitespace-nowrap">
+                                            Posted by{" "}
+                                            <span className="text-orange-500 font-medium">{blog.added_by}</span>
+                                        </span>
+
+                                        {/* ✅ Simulated Rotating Date */}
+                                        <span className="text-gray-400 whitespace-nowrap">
+                                            {formatDate(simulatedDate)}
+                                        </span>
+
+                                        {/* Read More Button */}
+                                        <button
+                                            onClick={() => navigate(`/blog/${blog.id}`)}
+                                            className="px-3 py-1 bg-orange-500 text-white text-xs rounded-md hover:bg-orange-600 transition whitespace-nowrap"
+                                        >
+                                            Read More →
+                                        </button>
+
+                                    </div>
+
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
 
                 </div>
             )}
