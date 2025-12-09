@@ -14,9 +14,9 @@ const Auth = () => {
     e.preventDefault();
     setMessage("");
 
-    const url = isLogin
-      ? "http://localhost/vayuhu_backend/login.php"
-      : "http://localhost/vayuhu_backend/signup.php";
+    const BASE_URL = import.meta.env.VITE_API_URL;
+
+    const url = isLogin ? `${BASE_URL}/login.php` : `${BASE_URL}/signup.php`;
 
     const payload = { email, password, ...(isLogin ? {} : { name }) };
 
@@ -66,9 +66,10 @@ const Auth = () => {
     console.log("Using token for protected route:", token);
 
     try {
-      const res = await fetch("http://localhost/vayuhu_backend/protected.php", {
+      const res = await fetch(`${BASE_URL}/protected.php`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       const data = await res.json();
       console.log("Protected route data:", data);
     } catch (err) {

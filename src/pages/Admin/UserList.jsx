@@ -4,6 +4,9 @@ import "react-toastify/dist/ReactToastify.css";
 import UserProfileModal from "./UserProfileModal";
 import UserComments from "./UserComments";
 
+// ✅ API base from environment variable
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
+
 const UserList = () => {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
@@ -13,17 +16,17 @@ const UserList = () => {
   const [previewImage, setPreviewImage] = useState(null);
   const [selectedCommentUser, setSelectedCommentUser] = useState(null);
 
-  // Map status values to colors
   const statusColors = {
     Pending: "text-yellow-600 bg-yellow-100",
     Ongoing: "text-blue-600 bg-blue-100",
     Followup: "text-purple-600 bg-purple-100",
     Closed: "text-green-600 bg-green-100",
   };
-  // Fetch Users
+
+  // ✅ Fetch users dynamically
   const fetchUsers = async () => {
     try {
-      const response = await fetch("http://localhost/vayuhu_backend/get_users.php");
+      const response = await fetch(`${API_BASE}/get_users.php`);
       const data = await response.json();
       setUsers(data.users || []);
     } catch (error) {
@@ -36,7 +39,7 @@ const UserList = () => {
     fetchUsers();
   }, []);
 
-  // Update user details
+  // Update user details dynamically
   const handleSaveUser = async (updatedData) => {
     try {
       const formData = new FormData();
@@ -52,7 +55,7 @@ const UserList = () => {
         formData.append("profilePic", updatedData.profilePic);
       }
 
-      const response = await fetch("http://localhost/vayuhu_backend/update_user.php", {
+      const response = await fetch(`${API_BASE}/update_user.php`, {
         method: "POST",
         body: formData,
       });
@@ -158,7 +161,6 @@ const UserList = () => {
                 >
                   <td className="py-2 px-4 border">{indexOfFirst + index + 1}</td>
 
-                  {/* Profile Pic */}
                   <td className="py-2 px-4 border">
                     {user.profile_pic ? (
                       <img
@@ -178,17 +180,16 @@ const UserList = () => {
                   <td className="py-2 px-4 border">{user.phone}</td>
                   <td className="py-2 px-4 border">{user.email}</td>
 
-                  {/* Status with color */}
                   <td className="py-2 px-4 border text-center">
                     <span
-                      className={`px-2 py-1 rounded-full text-sm font-semibold ${statusColors[user.status] || "text-gray-500 bg-gray-100"
-                        }`}
+                      className={`px-2 py-1 rounded-full text-sm font-semibold ${
+                        statusColors[user.status] || "text-gray-500 bg-gray-100"
+                      }`}
                     >
                       {user.status || "Pending"}
                     </span>
                   </td>
 
-                  {/* Comments */}
                   <td className="py-2 px-4 border">
                     <button
                       className="text-orange-500 border border-orange-500 px-3 py-1 rounded hover:bg-orange-50"
@@ -198,7 +199,6 @@ const UserList = () => {
                     </button>
                   </td>
 
-                  {/* Edit */}
                   <td className="py-2 px-4 border">
                     <button
                       className="text-orange-500 border border-orange-500 px-3 py-1 rounded hover:bg-orange-50"
@@ -208,7 +208,6 @@ const UserList = () => {
                     </button>
                   </td>
 
-                  {/* Company */}
                   <td className="py-2 px-4 border">
                     <button className="text-orange-500 border border-orange-500 px-3 py-1 rounded hover:bg-orange-50">
                       View
@@ -245,8 +244,9 @@ const UserList = () => {
             <button
               key={idx}
               onClick={() => setCurrentPage(idx + 1)}
-              className={`px-3 py-1 border rounded ${currentPage === idx + 1 ? "bg-orange-500 text-white" : ""
-                }`}
+              className={`px-3 py-1 border rounded ${
+                currentPage === idx + 1 ? "bg-orange-500 text-white" : ""
+              }`}
             >
               {idx + 1}
             </button>

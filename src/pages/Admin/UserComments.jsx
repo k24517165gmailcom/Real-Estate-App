@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 
+// ✅ API base from environment variable
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
+
 const UserComments = ({ user, onBack, onStatusUpdate }) => {
   const [formData, setFormData] = useState({
     status: "Pending",
@@ -12,13 +15,13 @@ const UserComments = ({ user, onBack, onStatusUpdate }) => {
   const [loading, setLoading] = useState(false);
   const [dateError, setDateError] = useState("");
   const [isDateValid, setIsDateValid] = useState(false);
-
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
+  // ✅ Fetch comments dynamically
   useEffect(() => {
     if (user?.id) {
-      fetch(`http://localhost/vayuhu_backend/get_user_comments.php?user_id=${user.id}`)
+      fetch(`${API_BASE}/get_user_comments.php?user_id=${user.id}`)
         .then((res) => res.json())
         .then((data) => {
           if (data.success) setComments(data.comments || []);
@@ -48,7 +51,6 @@ const UserComments = ({ user, onBack, onStatusUpdate }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ✅ Submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -70,7 +72,7 @@ const UserComments = ({ user, onBack, onStatusUpdate }) => {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost/vayuhu_backend/add_user_comment.php", {
+      const res = await fetch(`${API_BASE}/add_user_comment.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -81,6 +83,7 @@ const UserComments = ({ user, onBack, onStatusUpdate }) => {
           follow_up_time: formData.status === "Follow-Up" ? formData.followUpTime : null,
         }),
       });
+
       const data = await res.json();
 
       if (data.success) {
@@ -95,11 +98,7 @@ const UserComments = ({ user, onBack, onStatusUpdate }) => {
           },
         ]);
 
-        // ✅ Notify parent to refresh user list
         if (onStatusUpdate) onStatusUpdate();
-
-        // ✅ Optionally go back automatically after submission
-        // onBack();
 
         setFormData({
           status: "Pending",
@@ -114,6 +113,7 @@ const UserComments = ({ user, onBack, onStatusUpdate }) => {
       }
     } catch (err) {
       console.error(err);
+      alert("Network error");
     } finally {
       setLoading(false);
     }
@@ -163,7 +163,6 @@ const UserComments = ({ user, onBack, onStatusUpdate }) => {
       {/* Add Comment Form */}
       <form onSubmit={handleSubmit} className="border border-orange-300 rounded-lg p-4 mb-6 bg-white shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Status Dropdown */}
           <div>
             <label className="text-sm font-medium text-gray-600 mb-1 block">
               Status <span className="text-red-500">*</span>
@@ -184,7 +183,6 @@ const UserComments = ({ user, onBack, onStatusUpdate }) => {
             </select>
           </div>
 
-          {/* Follow-Up Date & Time */}
           {formData.status === "Follow-Up" && (
             <div className="flex gap-3 items-end">
               <div className="flex-1">
@@ -227,7 +225,6 @@ const UserComments = ({ user, onBack, onStatusUpdate }) => {
             </div>
           )}
 
-          {/* Comment Field */}
           <div className="md:col-span-2">
             <label className="text-sm font-medium text-gray-600 mb-1 block">
               New Comment <span className="text-red-500">*</span>
@@ -244,7 +241,6 @@ const UserComments = ({ user, onBack, onStatusUpdate }) => {
           </div>
         </div>
 
-        {/* Submit */}
         <div className="flex justify-end">
           <button
             type="submit"
@@ -307,7 +303,6 @@ const UserComments = ({ user, onBack, onStatusUpdate }) => {
           </table>
         </div>
 
-        {/* Pagination */}
         <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
           <div className="flex items-center gap-2">
             <label>Show</label>
@@ -317,9 +312,7 @@ const UserComments = ({ user, onBack, onStatusUpdate }) => {
               className="border border-orange-300 rounded px-2 py-1"
             >
               {[5, 10, 20].map((num) => (
-                <option key={num} value={num}>
-                  {num}
-                </option>
+                <option key={num} value={num}>{num}</option>
               ))}
             </select>
             <span>entries</span>

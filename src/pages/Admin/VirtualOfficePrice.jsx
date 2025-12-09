@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import EditVirtualOfficePriceModal from "./EditVirtualOfficePriceModal"; // ✅ Import modal
+import EditVirtualOfficePriceModal from "./EditVirtualOfficePriceModal";
 
-const API_URL = "http://localhost/vayuhu_backend";
+// ✅ Vite environment variable
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
 
 const VirtualOfficePrice = () => {
   const [priceList, setPriceList] = useState([]);
@@ -10,13 +11,11 @@ const VirtualOfficePrice = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
-  // ✅ Status color mapping
   const statusColors = {
     Active: "text-green-600 bg-green-100",
     Inactive: "text-red-600 bg-red-100",
   };
 
-  // ✅ Fetch prices
   const fetchPrices = async () => {
     try {
       const response = await fetch(`${API_URL}/get_virtual_office_price_list.php`);
@@ -38,7 +37,6 @@ const VirtualOfficePrice = () => {
     fetchPrices();
   }, []);
 
-  // ✅ Handle update
   const handleUpdate = async (updatedData) => {
     try {
       const response = await fetch(`${API_URL}/update_virtual_office_price.php`, {
@@ -46,9 +44,7 @@ const VirtualOfficePrice = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedData),
       });
-
       const result = await response.json();
-
       if (result.status === "success") {
         toast.success("Price updated successfully!");
         setShowModal(false);
@@ -69,7 +65,6 @@ const VirtualOfficePrice = () => {
           Virtual Office Price List
         </h2>
 
-        {/* Table */}
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="min-w-full text-sm bg-white">
             <thead>
@@ -82,7 +77,6 @@ const VirtualOfficePrice = () => {
                 <th className="py-2 px-4 border text-center">Actions</th>
               </tr>
             </thead>
-
             <tbody>
               {loading ? (
                 <tr>
@@ -92,32 +86,20 @@ const VirtualOfficePrice = () => {
                 </tr>
               ) : priceList.length > 0 ? (
                 priceList.map((item, index) => (
-                  <tr
-                    key={item.id}
-                    className="text-center hover:bg-orange-50 transition"
-                  >
+                  <tr key={item.id} className="text-center hover:bg-orange-50 transition">
                     <td className="py-2 px-4 border">{index + 1}</td>
-                    <td className="py-2 px-4 border text-gray-700">
-                      {item.min_duration}
-                    </td>
-                    <td className="py-2 px-4 border text-gray-700">
-                      {item.max_duration}
-                    </td>
-                    <td className="py-2 px-4 border text-gray-700">
-                      ₹{item.price}
-                    </td>
+                    <td className="py-2 px-4 border">{item.min_duration}</td>
+                    <td className="py-2 px-4 border">{item.max_duration}</td>
+                    <td className="py-2 px-4 border">₹{item.price}</td>
                     <td className="py-2 px-4 border">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          statusColors[item.status] ||
-                          "bg-gray-100 text-gray-500"
+                          statusColors[item.status] || "bg-gray-100 text-gray-500"
                         }`}
                       >
                         {item.status}
                       </span>
                     </td>
-
-                    {/* Edit Button */}
                     <td className="py-2 px-4 border">
                       <button
                         className="border border-orange-500 text-orange-500 px-3 py-1 rounded hover:bg-orange-500 hover:text-white transition text-sm"
@@ -143,7 +125,6 @@ const VirtualOfficePrice = () => {
         </div>
       </div>
 
-      {/* ✅ Edit Modal */}
       {showModal && selectedItem && (
         <EditVirtualOfficePriceModal
           data={selectedItem}

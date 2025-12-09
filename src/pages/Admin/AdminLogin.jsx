@@ -7,14 +7,17 @@ const AdminLogin = () => {
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
+  // ✅ Use environment variable for API base URL
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
 
-    const url = "http://localhost/vayuhu_backend/admin_login.php";
+    const url = `${API_BASE}/admin_login.php`; // ✅ use environment variable
     const payload = { email, password };
 
-    console.log("Submitting admin login form:", payload); // ✅ debug
+    console.log("Submitting admin login form:", payload);
 
     try {
       const response = await fetch(url, {
@@ -31,7 +34,7 @@ const AdminLogin = () => {
       setMessage(result.message);
 
       if (result.status === "success" && result.admin) {
-        // ✅ Save JWT token
+        // ✅ Save JWT token if provided
         if (result.token) {
           localStorage.setItem("token", result.token);
           console.log("Saved JWT token:", result.token);

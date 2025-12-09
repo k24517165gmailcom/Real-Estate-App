@@ -13,7 +13,7 @@ const VisitorsDetails = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const userId = user?.id;
 
-  const API_BASE = "http://localhost/vayuhu_backend";
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
 
   useEffect(() => {
     if (!userId) {

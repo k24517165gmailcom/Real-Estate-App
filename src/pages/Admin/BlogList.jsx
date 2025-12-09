@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import BlogEditModal from "./BlogEditModal";
 
-const API_URL = "http://localhost/vayuhu_backend";
+// ✅ Use environment variable or fallback to localhost
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
 
 const BlogList = () => {
   const [blogs, setBlogs] = useState([]);

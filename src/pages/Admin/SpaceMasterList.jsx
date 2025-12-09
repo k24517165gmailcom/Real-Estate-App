@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import EditSpaceMasterModal from "./EditSpaceMasterModal"; // ✅ Update path as needed
+import EditSpaceMasterModal from "./EditSpaceMasterModal";
 
-const API_URL = "http://localhost/vayuhu_backend";
+// ✅ Use environment variable for API base URL
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
 
 const SpaceMasterList = () => {
   const [spaces, setSpaces] = useState([]);
@@ -13,17 +14,15 @@ const SpaceMasterList = () => {
   const [selectedSpace, setSelectedSpace] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
-
-  // Status color mapping
   const statusColors = {
     Active: "text-green-600 bg-green-100",
     Inactive: "text-red-600 bg-red-100",
   };
 
-  // Fetch Spaces
+  // Fetch spaces dynamically
   const fetchSpaces = async () => {
     try {
-      const response = await fetch(`${API_URL}/get_spaces.php`);
+      const response = await fetch(`${API_BASE}/get_spaces.php`);
       const data = await response.json();
 
       if (data.success) {
@@ -41,31 +40,29 @@ const SpaceMasterList = () => {
     fetchSpaces();
   }, []);
 
-  // Filter logic
+  // Filter spaces by name or code
   const filteredSpaces = spaces.filter(
     (space) =>
       space.space.toLowerCase().includes(search.toLowerCase()) ||
       space.space_code.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Handle updating a space
   const handleUpdateSpace = async (data) => {
     const formData = new FormData();
-
     Object.keys(data).forEach((key) => {
       if (data[key] !== null && data[key] !== undefined) {
         formData.append(key, data[key]);
       }
     });
 
-    // Include ID
     formData.append("id", selectedSpace.id);
 
     try {
-      const res = await fetch(`${API_URL}/update_space.php`, {
+      const res = await fetch(`${API_BASE}/update_space.php`, {
         method: "POST",
         body: formData,
       });
-
       const result = await res.json();
 
       if (result.success) {
@@ -80,7 +77,7 @@ const SpaceMasterList = () => {
     }
   };
 
-
+  // Pagination logic
   const indexOfLast = currentPage * entriesPerPage;
   const indexOfFirst = indexOfLast - entriesPerPage;
   const currentSpaces = filteredSpaces.slice(indexOfFirst, indexOfLast);
@@ -91,7 +88,6 @@ const SpaceMasterList = () => {
       {/* Header + Search */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
         <h2 className="text-2xl font-semibold">Space Master</h2>
-
         <div className="flex flex-wrap items-center gap-3">
           <div>
             <span className="mr-2">Show</span>
@@ -109,7 +105,6 @@ const SpaceMasterList = () => {
             </select>
             <span className="ml-1">entries</span>
           </div>
-
           <input
             type="text"
             className="border px-3 py-1 rounded"
@@ -129,29 +124,22 @@ const SpaceMasterList = () => {
               <th className="py-2 px-4 border">Image</th>
               <th className="py-2 px-4 border">Space Code</th>
               <th className="py-2 px-4 border">Space Name</th>
-
               <th className="py-2 px-4 border">Per Hour</th>
               <th className="py-2 px-4 border">Per Day</th>
               <th className="py-2 px-4 border">One Week</th>
               <th className="py-2 px-4 border">Two Weeks</th>
               <th className="py-2 px-4 border">Three Weeks</th>
               <th className="py-2 px-4 border">Per Month</th>
-
               <th className="py-2 px-4 border">Min Duration</th>
               <th className="py-2 px-4 border">Max Duration</th>
-
               <th className="py-2 px-4 border">Status</th>
               <th className="py-2 px-4 border">Actions</th>
             </tr>
           </thead>
-
           <tbody>
             {currentSpaces.length > 0 ? (
               currentSpaces.map((item, index) => (
-                <tr
-                  key={item.id}
-                  className="text-center hover:bg-orange-50 transition"
-                >
+                <tr key={item.id} className="text-center hover:bg-orange-50 transition">
                   <td className="py-2 px-4 border">{indexOfFirst + index + 1}</td>
 
                   {/* Image */}
@@ -172,27 +160,20 @@ const SpaceMasterList = () => {
 
                   <td className="py-2 px-4 border">{item.space_code}</td>
                   <td className="py-2 px-4 border">{item.space}</td>
-
                   <td className="py-2 px-4 border">{item.per_hour || "-"}</td>
                   <td className="py-2 px-4 border">{item.per_day || "-"}</td>
                   <td className="py-2 px-4 border">{item.one_week || "-"}</td>
                   <td className="py-2 px-4 border">{item.two_weeks || "-"}</td>
                   <td className="py-2 px-4 border">{item.three_weeks || "-"}</td>
                   <td className="py-2 px-4 border">{item.per_month || "-"}</td>
+                  <td className="py-2 px-4 border">{item.min_duration_desc || "-"}</td>
+                  <td className="py-2 px-4 border">{item.max_duration_desc || "-"}</td>
 
-                  <td className="py-2 px-4 border">
-                    {item.min_duration_desc || "-"}
-                  </td>
-
-                  <td className="py-2 px-4 border">
-                    {item.max_duration_desc || "-"}
-                  </td>
-
-                  {/* Status */}
                   <td className="py-2 px-4 border">
                     <span
-                      className={`px-2 py-1 rounded-full text-sm font-semibold ${statusColors[item.status] || "bg-gray-100 text-gray-500"
-                        }`}
+                      className={`px-2 py-1 rounded-full text-sm font-semibold ${
+                        statusColors[item.status] || "bg-gray-100 text-gray-500"
+                      }`}
                     >
                       {item.status}
                     </span>
@@ -209,7 +190,6 @@ const SpaceMasterList = () => {
                     >
                       Edit
                     </button>
-
                   </td>
                 </tr>
               ))
@@ -227,8 +207,7 @@ const SpaceMasterList = () => {
       {/* Pagination */}
       <div className="flex flex-col md:flex-row justify-between items-center mt-4 text-sm text-gray-600 gap-2">
         <p>
-          Showing {indexOfFirst + 1} to{" "}
-          {Math.min(indexOfLast, filteredSpaces.length)} of{" "}
+          Showing {indexOfFirst + 1} to {Math.min(indexOfLast, filteredSpaces.length)} of{" "}
           {filteredSpaces.length} entries
         </p>
 
@@ -245,17 +224,16 @@ const SpaceMasterList = () => {
             <button
               key={idx}
               onClick={() => setCurrentPage(idx + 1)}
-              className={`px-3 py-1 border rounded ${currentPage === idx + 1 ? "bg-orange-500 text-white" : ""
-                }`}
+              className={`px-3 py-1 border rounded ${
+                currentPage === idx + 1 ? "bg-orange-500 text-white" : ""
+              }`}
             >
               {idx + 1}
             </button>
           ))}
 
           <button
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-            }
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
             disabled={currentPage === totalPages}
             className="px-3 py-1 border rounded disabled:opacity-50"
           >
@@ -264,7 +242,7 @@ const SpaceMasterList = () => {
         </div>
       </div>
 
-      {/* Image Preview Modal */}
+      {/* Image Preview */}
       {previewImage && (
         <div
           className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
@@ -286,7 +264,7 @@ const SpaceMasterList = () => {
         </div>
       )}
 
-      {/* ✅ Real Edit Modal */}
+      {/* Edit Modal */}
       {showEditModal && (
         <EditSpaceMasterModal
           space={selectedSpace}
@@ -294,8 +272,6 @@ const SpaceMasterList = () => {
           onSave={handleUpdateSpace}
         />
       )}
-
-
     </div>
   );
 };

@@ -7,6 +7,8 @@ import { useCart } from "../context/CartContext";
 import CartDrawer from "../components/CartDrawer";
 import FloatingCartButton from "../components/FloatingCartButton";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 // Helper to get logged-in user id (same as yours)
 const getUserId = () => {
   try {
@@ -141,7 +143,7 @@ const WorkspacePricing = () => {
   const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
-    fetch("http://localhost/vayuhu_backend/get_spaces.php")
+    fetch(`${API_BASE_URL}/get_spaces.php`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -151,7 +153,7 @@ const WorkspacePricing = () => {
               id: i.id,
               title: i.space,
               desc: i.min_duration_desc || "",
-              type: i.space_code, // space code
+              type: i.space_code,
               capacity: Number(i.capacity) || 10,
               monthly: Number(i.per_month) || null,
               daily: Number(i.per_day) || null,
@@ -171,7 +173,7 @@ const WorkspacePricing = () => {
         setError("Failed to load workspace data");
         setLoading(false);
       });
-  }, []);
+  }, [API_BASE_URL]);
 
   // GROUP workspaces by title + pricing (so duplicates with same pricing collapse)
   const groupedWorkspaces = useMemo(() => {
@@ -250,20 +252,17 @@ const WorkspacePricing = () => {
     if (!coupon) return toast.error("Please enter a coupon code");
 
     try {
-      const res = await fetch(
-        "http://localhost/vayuhu_backend/apply_coupon.php",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            coupon_code: coupon,
-            workspace_title: modalData?.title,
-            plan_type: modalData?.planType,
-            total_amount: calculateBaseAmount(),
-            user_id: getUserId(),
-          }),
-        }
-      );
+      const res = await fetch(`${API_BASE_URL}/apply_coupon.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          coupon_code: coupon,
+          workspace_title: modalData?.title,
+          plan_type: modalData?.planType,
+          total_amount: calculateBaseAmount(),
+          user_id: getUserId(),
+        }),
+      });
 
       const data = await res.json();
 
@@ -1275,7 +1274,7 @@ const WorkspacePricing = () => {
                     onClick={async () => {
                       // 🟢 Step 0 — Check workspace availability before payment
                       const availabilityResponse = await fetch(
-                        "http://localhost/vayuhu_backend/check_workspace_availability.php",
+                        `${API_BASE_URL}/check_workspace_availability.php`,
                         {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
@@ -1355,16 +1354,13 @@ const WorkspacePricing = () => {
                       };
 
                       // 1️⃣ Create Razorpay Order
-                      fetch(
-                        "http://localhost/vayuhu_backend/create_razorpay_order.php",
-                        {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            amount: bookingData.final_amount,
-                          }),
-                        }
-                      )
+                      fetch(`${API_BASE_URL}/create_razorpay_order.php`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          amount: bookingData.final_amount,
+                        }),
+                      })
                         .then((res) => res.json())
                         .then((data) => {
                           if (!data.success) throw new Error(data.message);
@@ -1378,22 +1374,19 @@ const WorkspacePricing = () => {
                             order_id: data.order_id,
                             handler: function (response) {
                               // 2️⃣ Verify payment on backend
-                              fetch(
-                                "http://localhost/vayuhu_backend/verify_payment.php",
-                                {
-                                  method: "POST",
-                                  headers: {
-                                    "Content-Type": "application/json",
-                                  },
-                                  body: JSON.stringify(response),
-                                }
-                              )
+                              fetch(`${API_BASE_URL}/verify_payment.php`, {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify(response),
+                              })
                                 .then((res) => res.json())
                                 .then((verify) => {
                                   if (verify.success) {
                                     // 3️⃣ Add booking now
                                     fetch(
-                                      "http://localhost/vayuhu_backend/add_workspace_booking.php",
+                                      `${API_BASE_URL}/add_workspace_booking.php`,
                                       {
                                         method: "POST",
                                         headers: {
@@ -1412,7 +1405,7 @@ const WorkspacePricing = () => {
 
                                           // 📨 Trigger backend email
                                           fetch(
-                                            "http://localhost/vayuhu_backend/send_booking_email.php",
+                                            `${API_BASE_URL}/send_booking_email.php`,
                                             {
                                               method: "POST",
                                               headers: {

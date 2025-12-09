@@ -18,17 +18,14 @@ const Reservations = () => {
 
     const fetchBookings = async () => {
       try {
-        const response = await fetch(
-          "http://localhost/vayuhu_backend/get_workspace_bookings.php",
-          {
-            method: "POST",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ user_id: userId }),
-          }
-        );
+        const API_BASE =
+          import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
+
+        const response = await fetch(`${API_BASE}/get_workspace_bookings.php`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId }),
+        });
 
         const data = await response.json();
 
@@ -49,10 +46,11 @@ const Reservations = () => {
 
   return (
     <Layout>
-      <h1 className="text-2xl font-semibold mb-4 text-gray-800">All Reservations</h1>
+      <h1 className="text-2xl font-semibold mb-4 text-gray-800">
+        All Reservations
+      </h1>
 
       <div className="bg-white p-6 rounded-2xl shadow text-sm">
-        
         {loading && <p className="text-center p-4">Loading reservations...</p>}
         {error && <p className="text-center p-4 text-red-500">{error}</p>}
 
@@ -79,7 +77,7 @@ const Reservations = () => {
                   {[
                     "S.No.",
                     "Space",
-                    "Space Code",  // NEW COLUMN
+                    "Space Code", // NEW COLUMN
                     "Pack",
                     "Date",
                     "Timings",
@@ -107,21 +105,21 @@ const Reservations = () => {
                     <tr key={booking.booking_id} className="hover:bg-gray-50">
                       <td className="p-2 border">{index + 1}</td>
                       <td className="p-2 border">{booking.workspace_title}</td>
-                      <td className="p-2 border">{booking.space_code}</td>  {/* NEW COLUMN */}
+                      <td className="p-2 border">{booking.space_code}</td>{" "}
+                      {/* NEW COLUMN */}
                       <td className="p-2 border">{booking.plan_type}</td>
-
                       <td className="p-2 border">
                         {booking.start_date} - {booking.end_date}
                       </td>
-
                       <td className="p-2 border">
-                        {booking.start_time || "--"} - {booking.end_time || "--"}
+                        {booking.start_time || "--"} -{" "}
+                        {booking.end_time || "--"}
                       </td>
-
                       <td className="p-2 border">₹{booking.base_amount}</td>
                       <td className="p-2 border">₹{booking.discount_amount}</td>
-                      <td className="p-2 border font-semibold">₹{booking.final_amount}</td>
-
+                      <td className="p-2 border font-semibold">
+                        ₹{booking.final_amount}
+                      </td>
                       <td className="p-2 border">
                         <span
                           className={`px-2 py-1 rounded text-xs ${

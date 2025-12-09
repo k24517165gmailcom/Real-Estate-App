@@ -9,7 +9,8 @@ const Visitors = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const userId = user?.id;
 
-  const API_BASE = "http://localhost/vayuhu_backend";
+   // ✅ Use Vite environment variable with fallback
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
 
   const [formData, setFormData] = useState({
     name: "",

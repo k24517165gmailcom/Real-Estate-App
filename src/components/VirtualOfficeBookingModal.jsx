@@ -4,7 +4,8 @@ import { X } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const API_URL = "http://localhost/vayuhu_backend";
+// ✅ Use environment variable
+const API_URL = import.meta.env.VITE_API_URL;
 
 const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
   const [startDate, setStartDate] = useState("");
@@ -38,7 +39,7 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
-  // ✅ Fetch plan details (1 Year)
+  // ✅ Fetch plan details dynamically
   useEffect(() => {
     const fetchPlan = async () => {
       try {
@@ -61,7 +62,7 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
     if (isOpen) fetchPlan();
   }, [isOpen]);
 
-  // ✅ Auto-calculate End Date (1 Year Later)
+  // ✅ Auto-calculate End Date
   useEffect(() => {
     if (startDate) {
       const newEnd = new Date(startDate);
@@ -94,7 +95,7 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ✅ Submit Booking (with duplicate check + auto-close)
+  // ✅ Submit booking dynamically
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -115,7 +116,6 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
 
       const data = await response.json();
 
-      // ✅ Handle Duplicate Booking
       if (data.message && data.message.toLowerCase().includes("already booked")) {
         toast.info("ℹ️ You already have an active virtual office booking.");
         setLoading(false);
@@ -124,8 +124,6 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
 
       if (data.success) {
         toast.success("🎉 Virtual Office booked successfully!", { autoClose: 2500 });
-
-        // ✅ Auto-close after short delay
         setTimeout(() => {
           setStartDate("");
           setEndDate("");
@@ -162,7 +160,6 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
               exit={{ scale: 0.9, opacity: 0, y: 50 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
-              {/* Close Button */}
               <button
                 onClick={onClose}
                 className="absolute top-3 right-3 text-gray-400 hover:text-orange-500 transition"
@@ -170,7 +167,6 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
                 <X size={22} />
               </button>
 
-              {/* Title */}
               <h2 className="text-2xl font-semibold text-center text-gray-800 mb-6">
                 Book Your <span className="text-orange-500">Virtual Office</span>
               </h2>
@@ -192,11 +188,8 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
                 </div>
               ) : (
                 <form className="space-y-5" onSubmit={handleSubmit}>
-                  {/* Fixed Plan */}
                   <div>
-                    <label className="block text-gray-700 mb-2 font-medium">
-                      Plan
-                    </label>
+                    <label className="block text-gray-700 mb-2 font-medium">Plan</label>
                     <input
                       type="text"
                       value={plan || "Loading..."}
@@ -205,11 +198,8 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
                     />
                   </div>
 
-                  {/* Price */}
                   <div>
-                    <label className="block text-gray-700 mb-2 font-medium">
-                      Price
-                    </label>
+                    <label className="block text-gray-700 mb-2 font-medium">Price</label>
                     <input
                       type="text"
                       value={price ? `₹ ${price}` : "Loading..."}
@@ -218,11 +208,8 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
                     />
                   </div>
 
-                  {/* Start Date */}
                   <div>
-                    <label className="block text-gray-700 mb-2 font-medium">
-                      Start Date
-                    </label>
+                    <label className="block text-gray-700 mb-2 font-medium">Start Date</label>
                     <input
                       type="date"
                       min={today}
@@ -235,18 +222,13 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
                       }`}
                     />
                     {errors.startDate && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.startDate}
-                      </p>
+                      <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>
                     )}
                   </div>
 
-                  {/* End Date */}
                   {endDate && (
                     <div>
-                      <label className="block text-gray-700 mb-2 font-medium">
-                        End Date
-                      </label>
+                      <label className="block text-gray-700 mb-2 font-medium">End Date</label>
                       <input
                         type="date"
                         value={endDate}
@@ -256,7 +238,6 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
                     </div>
                   )}
 
-                  {/* Pay & Book Button */}
                   <button
                     type="submit"
                     disabled={loading}

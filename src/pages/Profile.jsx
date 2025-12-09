@@ -16,7 +16,8 @@ const Profile = () => {
   });
 
   const [loading, setLoading] = useState(true);
-  const API_BASE = "http://localhost/vayuhu_backend";
+  const API_BASE = import.meta.env.VITE_API_URL;
+
 
   // ✅ Get logged-in user info
   const user = JSON.parse(localStorage.getItem("user"));

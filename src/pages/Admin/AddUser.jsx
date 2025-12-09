@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 
 const AddUser = () => {
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -17,7 +19,7 @@ const AddUser = () => {
     setMessage("");
 
     try {
-      const response = await fetch("http://localhost/vayuhu_backend/add_user.php", {
+      const response = await fetch(`${API_BASE}/add_user.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -90,7 +92,7 @@ const AddUser = () => {
           {message && (
             <p
               className={`text-sm mt-3 text-center ${
-                message.includes("success") ? "text-green-600" : "text-red-500"
+                message.toLowerCase().includes("success") ? "text-green-600" : "text-red-500"
               }`}
             >
               {message}
