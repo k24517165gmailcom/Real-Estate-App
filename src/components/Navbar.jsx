@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { assets } from "../assets/assets";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -9,26 +10,22 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ Load user from localStorage once
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
     if (savedUser) setUser(JSON.parse(savedUser));
   }, []);
 
-  // ✅ Detect scroll to change navbar style
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // ✅ Helper for smooth scrolling
   const scrollToSection = (id) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
-  // ✅ Navigation handlers
   const handleNavClick = (id) => {
     setShowMobileMenu(false);
     if (location.pathname !== "/") {
@@ -49,68 +46,86 @@ const Navbar = () => {
     }
   };
 
+  const navItems = [
+    { label: "Home", action: () => handleNavClick("Header") },
+    { label: "About", action: () => handleNavClick("About") },
+    { label: "WorkSpaces", action: () => handleNavClick("WorkSpaces") },
+    { label: "Testimonials", action: () => handleNavClick("Testimonials") },
+    { label: "Virtual Office", action: handleVirtualOffice },
+  ];
+
   return (
     <>
-      {/* ✅ Navbar */}
+      {/* Navbar */}
       <div
-        className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
-          isScrolled
-            ? "bg-black/80 backdrop-blur-md shadow-md"
-            : "bg-transparent"
-        }`}
+  className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
+    isScrolled ? "bg-black/80 backdrop-blur-md shadow-md" : "bg-transparent"
+  }`}
+>
+  <div className="container mx-auto flex items-center py-3 px-4 sm:px-8 md:px-16 lg:px-24 justify-between">
+    
+    {/* Logo on the left */}
+    <div className="flex justify-start flex-1">
+      <img
+        src={assets.brandLogo}
+        alt="Vayuhu Logo"
+        className="w-28 sm:w-32 md:w-36 lg:w-40 cursor-pointer"
+        onClick={() => {
+          setShowMobileMenu(false);
+          if (location.pathname !== "/") {
+            navigate("/");
+            setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 400);
+          } else {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }
+        }}
+      />
+    </div>
+
+    {/* Nav links in the center (unchanged) */}
+    <div className="hidden md:flex items-center gap-4">
+      {navItems.map((item) => (
+        <motion.button
+          key={item.label}
+          onClick={item.action}
+          whileHover={{
+            scale: 1.05,
+            boxShadow: "0px 10px 20px rgba(255,127,80,0.4)",
+          }}
+          whileTap={{ scale: 0.95 }}
+          className="px-6 py-3 rounded-full font-medium text-orange-400 bg-white/0 border border-orange-400 text-sm sm:text-base transition-all duration-300 hover:bg-gradient-to-r hover:from-orange-400 hover:to-orange-600 hover:text-white"
+        >
+          {item.label}
+        </motion.button>
+      ))}
+    </div>
+
+    {/* CTA Button & Mobile Icon on the right */}
+    <div className="flex justify-end flex-1 items-center gap-4">
+      <button
+        onClick={() => navigate(user ? "/dashboard" : "/auth")}
+        className="hidden md:block bg-white text-black font-semibold px-6 py-3 rounded-full hover:bg-orange-500 hover:text-white transition-all duration-300"
       >
-        <div className="container mx-auto flex justify-between items-center py-3 px-4 sm:px-8 md:px-16 lg:px-24">
-          {/* Logo */}
-          <img
-            src={assets.brandLogo}
-            alt="Vayuhu Logo"
-            className="w-28 sm:w-32 md:w-36 lg:w-40 cursor-pointer"
-            onClick={() => {
-              setShowMobileMenu(false);
-              if (location.pathname !== "/") {
-                navigate("/");
-                setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 400);
-              } else {
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }
-            }}
-          />
+        {user ? "My Account" : "Sign up / Login"}
+      </button>
 
-          {/* Desktop Menu */}
-          <ul className="hidden md:flex items-center gap-6 lg:gap-8 text-white font-medium">
-            <button onClick={() => handleNavClick("Header")} className="hover:text-orange-400">Home</button>
-            <button onClick={() => handleNavClick("About")} className="hover:text-orange-400">About</button>
-            <button onClick={() => handleNavClick("WorkSpaces")} className="hover:text-orange-400">WorkSpaces</button>
-            <button onClick={() => handleNavClick("Testimonials")} className="hover:text-orange-400">Testimonials</button>
-            <button onClick={handleVirtualOffice} className="hover:text-orange-400">Virtual Office</button>
-          </ul>
+      {/* Mobile Menu Icon */}
+      <img
+        onClick={() => setShowMobileMenu(true)}
+        src={assets.menu_icon}
+        className="md:hidden w-6 sm:w-7 cursor-pointer invert"
+        alt="menu icon"
+      />
+    </div>
+  </div>
+</div>
 
-          {/* CTA Button */}
-          <button
-            onClick={() => navigate(user ? "/dashboard" : "/auth")}
-            className="hidden md:block bg-white text-black font-semibold px-6 py-2 rounded-full 
-                       hover:bg-orange-500 hover:text-white transition-all duration-300"
-          >
-            {user ? "My Account" : "Sign up / Login"}
-          </button>
 
-          {/* Mobile Menu Icon */}
-          <img
-            onClick={() => setShowMobileMenu(true)}
-            src={assets.menu_icon}
-            className="md:hidden w-6 sm:w-7 cursor-pointer invert"
-            alt="menu icon"
-          />
-        </div>
-      </div>
-
-      {/* ✅ Frosted Glass Mobile Menu Overlay */}
+      {/* Mobile Menu */}
       <div
-        className={`md:hidden fixed inset-0 z-[9999] 
-          bg-black/60 backdrop-blur-lg flex flex-col items-center justify-center 
-          transition-all duration-500 ease-in-out
-          ${showMobileMenu ? "opacity-100 visible" : "opacity-0 invisible"}
-        `}
+        className={`md:hidden fixed inset-0 z-[9999] bg-black/60 backdrop-blur-lg flex flex-col items-center justify-center transition-all duration-500 ease-in-out ${
+          showMobileMenu ? "opacity-100 visible" : "opacity-0 invisible"
+        }`}
       >
         {/* Close Button */}
         <img
@@ -120,22 +135,31 @@ const Navbar = () => {
           alt="close menu"
         />
 
-        {/* Nav Links */}
+        {/* Mobile Nav Links */}
         <ul className="flex flex-col items-center gap-6 text-lg font-semibold">
-          <button onClick={() => handleNavClick("Header")} className="hover:text-orange-400">Home</button>
-          <button onClick={() => handleNavClick("About")} className="hover:text-orange-400">About</button>
-          <button onClick={() => handleNavClick("WorkSpaces")} className="hover:text-orange-400">WorkSpaces</button>
-          <button onClick={() => handleNavClick("Testimonials")} className="hover:text-orange-400">Testimonials</button>
-          <button onClick={handleVirtualOffice} className="hover:text-orange-400">Virtual Office</button>
+          {navItems.map((item) => (
+            <motion.button
+              key={item.label}
+              onClick={item.action}
+              whileHover={{
+                scale: 1.05,
+                boxShadow: "0px 10px 20px rgba(255,127,80,0.4)",
+              }}
+              whileTap={{ scale: 0.95 }}
+              className="px-6 py-3 rounded-full text-orange-400 bg-white/0 hover:bg-gradient-to-r hover:from-orange-400 hover:via-red-900 hover:to-orange-600 hover:text-white transition-all duration-300"
+            >
+              {item.label}
+            </motion.button>
+          ))}
         </ul>
 
-        {/* CTA Button */}
+        {/* Mobile CTA */}
         <button
           onClick={() => {
             setShowMobileMenu(false);
             navigate(user ? "/dashboard" : "/auth");
           }}
-          className="mt-8 bg-orange-500 hover:bg-orange-600 text-white font-medium px-8 py-2 rounded-full transition-all duration-300"
+          className="mt-8 bg-orange-500 hover:bg-orange-600 text-white font-medium px-8 py-3 rounded-full transition-all duration-300"
         >
           {user ? "My Account" : "Sign up / Login"}
         </button>
