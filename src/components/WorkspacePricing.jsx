@@ -214,16 +214,23 @@ const WorkspacePricing = () => {
     const start = new Date(startDate);
     let end = new Date(start);
 
+    // 🟢 UPDATED: Only auto-set end date for Daily/Hourly. 
+    // For Monthly, we let the new Dropdown handle it (or default to 1 month initially)
     if (modalData.planType === "Monthly") {
-      end.setMonth(start.getMonth() + 1);
-      end.setDate(end.getDate() - 1);
+      // If endDate is empty, default to 1 month
+      if (!endDate) {
+          end.setMonth(start.getMonth() + 1);
+          end.setDate(end.getDate() - 1);
+          setEndDate(end.toISOString().split("T")[0]);
+      }
+      // If endDate is already set (via dropdown), do nothing here
     } else if (modalData.planType === "Daily") {
       end = new Date(start);
+      setEndDate(end.toISOString().split("T")[0]);
     } else if (modalData.planType === "Hourly") {
       end = new Date(start);
+      setEndDate(end.toISOString().split("T")[0]);
     }
-
-    setEndDate(end.toISOString().split("T")[0]);
   }, [startDate, modalData?.planType]);
 
   // Days calculation
@@ -289,7 +296,11 @@ const WorkspacePricing = () => {
       return price * days * count;
     }
     if (modalData?.planType === "Monthly") {
-      return price * count;
+      // 🟢 For monthly, 'days' variable holds actual days, but price is per month.
+      // We need to calculate how many MONTHS are selected.
+      // Approx calculation: days / 30
+      const months = Math.max(1, Math.round(days / 30));
+      return price * months * count;
     }
     if (modalData?.planType === "Hourly") {
       // If "numAttendees" is used manually, we use that.
@@ -544,6 +555,31 @@ const WorkspacePricing = () => {
       </motion.button>
     );
   };
+
+  // 🟢 NEW: Generate End Date Options for Step 2
+  const monthlyEndOptions = useMemo(() => {
+    if (!startDate || modalData?.planType !== "Monthly") return [];
+    
+    const options = [];
+    const start = new Date(startDate);
+
+    // Generate up to 12 months ahead
+    for (let i = 1; i <= 12; i++) {
+        const end = new Date(start);
+        end.setMonth(start.getMonth() + i);
+        // Subtract 1 day to complete the cycle (e.g., Jan 1 to Jan 31)
+        end.setDate(end.getDate() - 1); 
+        
+        const dateStr = end.toISOString().split('T')[0];
+        const label = end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        
+        options.push({ 
+            value: dateStr, 
+            label: `${label} (${i} Month${i > 1 ? 's' : ''})` 
+        });
+    }
+    return options;
+  }, [startDate, modalData]);
 
   return (
     <section
@@ -824,7 +860,10 @@ const WorkspacePricing = () => {
                   {modalData.planType.toLowerCase()} pack
                 </p>
 
-                <label className="block text-gray-700 mb-2">Start Date:</label>
+                {/* 🟢 REVERTED: Standard Date Picker for Start Date */}
+                <label className="block text-gray-700 mb-2">
+                  Start Date:
+                </label>
                 <input
                   type="date"
                   value={startDate}
@@ -1047,15 +1086,34 @@ const WorkspacePricing = () => {
                     <label className="block text-gray-700 mb-2">
                       End Date:
                     </label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      readOnly
-                      disabled
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 shadow-sm bg-gray-100 cursor-not-allowed text-gray-600"
-                    />
+                    
+                    {/* 🟢 CONDITIONAL: If Monthly, show Select Dropdown; else show Disabled Input */}
+                    {modalData.planType === "Monthly" ? (
+                        <select
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                        >
+                            {monthlyEndOptions.map(opt => (
+                                <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                </option>
+                            ))}
+                        </select>
+                    ) : (
+                        <input
+                          type="date"
+                          value={endDate}
+                          readOnly
+                          disabled
+                          className="w-full border border-gray-300 rounded-lg px-4 py-2 shadow-sm bg-gray-100 cursor-not-allowed text-gray-600"
+                        />
+                    )}
+                    
                     <p className="text-sm text-gray-500 mt-1">
-                      End date is auto-calculated based on your selected plan.
+                      {modalData.planType === "Monthly" 
+                        ? "Select duration (1 month, 2 months, etc.)"
+                        : "End date is auto-calculated based on your selected plan."}
                     </p>
                   </div>
                 </div>
