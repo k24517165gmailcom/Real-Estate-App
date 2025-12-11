@@ -96,7 +96,7 @@ const Reservations = () => {
               <tbody>
                 {bookings.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="text-center p-4 text-gray-500">
+                    <td colSpan="10" className="text-center p-4 text-gray-500">
                       No reservations found
                     </td>
                   </tr>
@@ -105,8 +105,18 @@ const Reservations = () => {
                     <tr key={booking.booking_id} className="hover:bg-gray-50">
                       <td className="p-2 border">{index + 1}</td>
                       <td className="p-2 border">{booking.workspace_title}</td>
-                      <td className="p-2 border">{booking.space_code}</td>{" "}
-                      {/* NEW COLUMN */}
+
+                      {/* 🟡 THIS IS THE FIX: Check seat_codes first, fallback to space_code */}
+                      <td className="p-2 border">
+                        {booking.seat_codes ? (
+                          <span className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded border border-orange-100 font-medium">
+                            {booking.seat_codes}
+                          </span>
+                        ) : (
+                          booking.space_code
+                        )}
+                      </td>
+
                       <td className="p-2 border">{booking.plan_type}</td>
                       <td className="p-2 border">
                         {booking.start_date} - {booking.end_date}

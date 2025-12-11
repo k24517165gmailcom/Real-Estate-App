@@ -31,13 +31,17 @@ const Reservations = () => {
     fetchReservations();
   }, []);
 
-  // ✅ Filter by name, mobile, or space
-  const filteredReservations = reservations.filter(
-    (res) =>
-      res.name.toLowerCase().includes(search.toLowerCase()) ||
-      res.mobile_no.includes(search) ||
-      res.space.toLowerCase().includes(search.toLowerCase())
-  );
+  // ✅ Filter by name, mobile, space, OR SPACE CODE (Updated)
+  const filteredReservations = reservations.filter((res) => {
+    const term = search.toLowerCase();
+    return (
+      (res.name && res.name.toLowerCase().includes(term)) ||
+      (res.mobile_no && res.mobile_no.includes(term)) ||
+      (res.space && res.space.toLowerCase().includes(term)) ||
+      (res.space_code && res.space_code.toLowerCase().includes(term)) ||
+      (res.seat_codes && res.seat_codes.toLowerCase().includes(term)) // 🟢 Allow searching by multi-seat codes
+    );
+  });
 
   // ✅ Pagination
   const indexOfLast = currentPage * entriesPerPage;
@@ -79,8 +83,8 @@ const Reservations = () => {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="border px-3 py-1 rounded"
-              placeholder="Search by name, mobile, or space"
+              className="border px-3 py-1 rounded w-64"
+              placeholder="Search name, mobile, or code..."
             />
           </div>
         </div>
@@ -88,7 +92,7 @@ const Reservations = () => {
 
       {/* Table */}
       <div className="overflow-x-auto shadow-sm rounded-lg border border-gray-200">
-        <table className="min-w-full bg-white">
+        <table className="min-w-full bg-white text-sm">
           <thead>
             <tr className="bg-orange-50 text-left text-gray-700">
               <th className="py-2 px-4 border">S.No.</th>
@@ -114,17 +118,30 @@ const Reservations = () => {
                   className="text-center hover:bg-orange-50 transition"
                 >
                   <td className="py-2 px-4 border">{indexOfFirst + index + 1}</td>
-                  <td className="py-2 px-4 border">{res.name}</td>
+                  <td className="py-2 px-4 border font-medium text-gray-800">{res.name}</td>
                   <td className="py-2 px-4 border">{res.mobile_no}</td>
                   <td className="py-2 px-4 border">{res.space}</td>
-                  <td className="py-2 px-4 border">{res.space_code}</td>
-                  <td className="py-2 px-4 border">{res.pack}</td>
-                  <td className="py-2 px-4 border">{formatDate(res.date)}</td>
-                  <td className="py-2 px-4 border">{res.timings}</td>
-                  <td className="py-2 px-4 border text-right">{res.amount}</td>
-                  <td className="py-2 px-4 border text-right">{res.discount}</td>
-                  <td className="py-2 px-4 border text-right">{res.final_total}</td>
-                  <td className="py-2 px-4 border">{res.booked_on}</td>
+                  
+                  {/* 🟢 UPDATED: Display Multiple Codes if available */}
+                  <td className="py-2 px-4 border">
+                    {res.seat_codes ? (
+                      <span className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded border border-orange-100 font-medium text-xs break-words max-w-[150px] inline-block">
+                        {res.seat_codes}
+                      </span>
+                    ) : (
+                      <span>{res.space_code}</span>
+                    )}
+                  </td>
+
+                  <td className="py-2 px-4 border capitalize">{res.pack}</td>
+                  <td className="py-2 px-4 border whitespace-nowrap">{formatDate(res.date)}</td>
+                  <td className="py-2 px-4 border whitespace-nowrap">{res.timings}</td>
+                  <td className="py-2 px-4 border text-right">₹{res.amount}</td>
+                  <td className="py-2 px-4 border text-right text-green-600">
+                    {Number(res.discount) > 0 ? `-₹${res.discount}` : "₹0"}
+                  </td>
+                  <td className="py-2 px-4 border text-right font-bold">₹{res.final_total}</td>
+                  <td className="py-2 px-4 border text-xs text-gray-500">{res.booked_on}</td>
                 </tr>
               ))
             ) : (
@@ -148,7 +165,7 @@ const Reservations = () => {
           <button
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
-            className="px-3 py-1 border rounded disabled:opacity-50"
+            className="px-3 py-1 border rounded disabled:opacity-50 hover:bg-gray-100"
           >
             Prev
           </button>
@@ -156,7 +173,9 @@ const Reservations = () => {
             <button
               key={idx}
               onClick={() => setCurrentPage(idx + 1)}
-              className={`px-3 py-1 border rounded ${currentPage === idx + 1 ? "bg-orange-500 text-white" : ""}`}
+              className={`px-3 py-1 border rounded ${
+                currentPage === idx + 1 ? "bg-orange-500 text-white" : "hover:bg-gray-100"
+              }`}
             >
               {idx + 1}
             </button>
@@ -164,7 +183,7 @@ const Reservations = () => {
           <button
             onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
             disabled={currentPage === totalPages}
-            className="px-3 py-1 border rounded disabled:opacity-50"
+            className="px-3 py-1 border rounded disabled:opacity-50 hover:bg-gray-100"
           >
             Next
           </button>

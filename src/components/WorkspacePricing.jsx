@@ -136,8 +136,9 @@ const WorkspacePricing = () => {
   const [numAttendees, setNumAttendees] = useState(1);
 
   // NEW: data for the small radio popup to pick a space code
+  // UPDATED: Now uses `selectedIds` (array) instead of `selectedId` (single)
   const [codeSelectModal, setCodeSelectModal] = useState(null);
-  // structure: { groupTitle, codes: [{id, code, raw}], planType, price }
+  // structure: { groupTitle, codes: [{id, code, raw}], planType, price, selectedIds: [] }
 
   const { addToCart } = useCart();
   const [cartOpen, setCartOpen] = useState(false);
@@ -278,13 +279,24 @@ const WorkspacePricing = () => {
     }
   };
 
-  // Billing calculations (same)
+  // UPDATED: Billing calculations to handle Multiple Seats
   const calculateBaseAmount = () => {
     const price = modalData?.price || 0;
-    if (modalData?.planType === "Daily") return price * days;
-    if (modalData?.planType === "Monthly") return price;
+    // Get number of seats selected (default to 1)
+    const count = modalData?.seatCount || 1;
+
+    if (modalData?.planType === "Daily") {
+      return price * days * count;
+    }
+    if (modalData?.planType === "Monthly") {
+      return price * count;
+    }
     if (modalData?.planType === "Hourly") {
-      return price * totalHours * days * numAttendees;
+      // If "numAttendees" is used manually, we use that.
+      // If "seatCount" is > 1 (multiple codes selected), we use that as the multiplier.
+      // For logic safety: if seatCount > 1, it overrides numAttendees or acts as the base unit.
+      const attendees = count > 1 ? count : numAttendees;
+      return price * totalHours * days * attendees;
     }
     return 0;
   };
@@ -341,6 +353,7 @@ const WorkspacePricing = () => {
             : normalizedPlan === "Daily"
             ? group.daily
             : group.monthly,
+        selectedIds: [], // Start with empty selection
       });
       return;
     }
@@ -363,6 +376,8 @@ const WorkspacePricing = () => {
           ? group.daily
           : group.monthly,
       raw: chosenRaw,
+      seatCount: 1, // Single seat
+      selectedCodes: sole.code,
     });
 
     // set defaults
@@ -385,15 +400,25 @@ const WorkspacePricing = () => {
     setNumAttendees(1);
   };
 
-  // Called when user confirms a code from the small radio popup
-  const confirmCodeSelection = (selectedId, planType) => {
-    // find raw by id in workspaces
-    const found = workspaces.find((w) => String(w.id) === String(selectedId));
-    if (!found) {
+  // Called when user confirms a code from the small popup
+  // UPDATED to accept array of IDs
+  const confirmCodeSelection = (selectedIds, planType) => {
+    if (!selectedIds || selectedIds.length === 0) {
+      toast.error("Please select at least one seat.");
+      return;
+    }
+
+    // Identify selected items
+    const selectedItems = workspaces.filter((w) => selectedIds.includes(w.id));
+    if (selectedItems.length === 0) {
       toast.error("Selected space not found");
       setCodeSelectModal(null);
       return;
     }
+
+    const primary = selectedItems[0];
+    // Create string of codes for display, e.g. "WS01, WS02"
+    const codesString = selectedItems.map((i) => i.type).join(", ");
 
     // Normalize planType for consistent capitalization
     const normalizedPlan =
@@ -404,25 +429,28 @@ const WorkspacePricing = () => {
         : "Monthly";
 
     setModalData({
-      id: found.id,
-      title: found.title,
-      desc: found.desc,
-      type: found.type,
-      capacity: found.capacity,
+      id: primary.id, // Use primary ID for backend foreign key
+      allIds: selectedIds, // Store all IDs if needed later
+      title: primary.title,
+      desc: primary.desc,
+      type: codesString, // Show all codes
+      capacity: primary.capacity,
       planType: normalizedPlan,
       price:
         normalizedPlan === "Hourly"
-          ? found.hourly
+          ? primary.hourly
           : normalizedPlan === "Daily"
-          ? found.daily
-          : found.monthly,
-      raw: found.raw,
+          ? primary.daily
+          : primary.monthly,
+      raw: primary.raw,
+      seatCount: selectedIds.length,
+      selectedCodes: codesString,
     });
 
     // close code selector
     setCodeSelectModal(null);
 
-    // initialize booking defaults (same as before)
+    // initialize booking defaults
     setStartDate(new Date().toISOString().split("T")[0]);
     setEndDate("");
     setStep(1);
@@ -439,7 +467,8 @@ const WorkspacePricing = () => {
       setEndTime("20:00");
     }
 
-    setNumAttendees(1);
+    // Set numAttendees to match the number of seats selected
+    setNumAttendees(selectedIds.length);
   };
 
   // Display numbers for billing
@@ -449,8 +478,10 @@ const WorkspacePricing = () => {
   const finalTotal = calculateTotal().toFixed(0);
 
   // Helper to render each seat
+  // UPDATED: Now toggles selection instead of replacing it
   const renderSeat = (c) => {
-    const isSelected = codeSelectModal.selectedId === c.id;
+    // Check if current ID is in the selected array
+    const isSelected = codeSelectModal.selectedIds.includes(c.id);
     const isDisabled = !c.raw.is_available;
 
     return (
@@ -480,14 +511,24 @@ const WorkspacePricing = () => {
                 // Fallback to backend-provided reason (for daily/monthly)
                 return reason;
               })()
+            : isSelected
+            ? "Click to Deselect"
             : "Available"
         }
         onClick={() => {
           if (!isDisabled) {
-            setCodeSelectModal((prev) => ({
-              ...prev,
-              selectedId: c.id,
-            }));
+            setCodeSelectModal((prev) => {
+              const current = prev.selectedIds;
+              // Toggle logic
+              if (current.includes(c.id)) {
+                return {
+                  ...prev,
+                  selectedIds: current.filter((id) => id !== c.id),
+                };
+              } else {
+                return { ...prev, selectedIds: [...current, c.id] };
+              }
+            });
           }
         }}
         className={`w-14 h-10 rounded-md flex items-center justify-center text-xs font-semibold transition-all border
@@ -495,7 +536,7 @@ const WorkspacePricing = () => {
           isDisabled
             ? "bg-gray-200 text-gray-400 cursor-not-allowed"
             : isSelected
-            ? "bg-orange-500 text-white border-orange-600"
+            ? "bg-orange-500 text-white border-orange-600 scale-105 shadow-md"
             : "bg-green-100 text-gray-700 border-green-300 hover:bg-green-200"
         }`}
       >
@@ -555,8 +596,7 @@ const WorkspacePricing = () => {
                 <p className="text-sm text-gray-500 mb-2">
                   {group.items.length > 1 ? (
                     <span className="italic text-sm text-gray-600">
-                      Multiple space codes (
-                      {group.items.map((it) => it.code).join(", ")})
+                      Multiple space codes available ({group.items.length})
                     </span>
                   ) : (
                     <span className="text-sm text-gray-500">
@@ -620,12 +660,15 @@ const WorkspacePricing = () => {
                 ✕
               </button>
 
-              <h3 className="text-xl font-semibold text-gray-800 mb-6 text-center">
-                Select Space Code for{" "}
+              <h3 className="text-xl font-semibold text-gray-800 mb-2 text-center">
+                Select Space Codes for{" "}
                 <span className="text-orange-500">
                   {codeSelectModal.groupTitle}
                 </span>
               </h3>
+              <p className="text-center text-gray-500 text-sm mb-6">
+                Click to select multiple seats
+              </p>
 
               {/* Seat-style selection grid (Conditional Walkway) */}
               <div className="flex flex-col items-center gap-5 mb-6">
@@ -710,7 +753,10 @@ const WorkspacePricing = () => {
               </div>
 
               {/* Action buttons */}
-              <div className="flex justify-end gap-3">
+              <div className="flex justify-end gap-3 items-center">
+                <span className="text-sm font-semibold text-gray-700 mr-2">
+                  {codeSelectModal.selectedIds.length} seat(s) selected
+                </span>
                 <button
                   onClick={() => setCodeSelectModal(null)}
                   className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-700 font-medium"
@@ -718,14 +764,15 @@ const WorkspacePricing = () => {
                   Cancel
                 </button>
                 <button
-                  disabled={!codeSelectModal.selectedId}
+                  disabled={codeSelectModal.selectedIds.length === 0}
                   onClick={() => {
-                    const sel =
-                      codeSelectModal.selectedId ?? codeSelectModal.codes[0].id;
-                    confirmCodeSelection(sel, codeSelectModal.planType);
+                    confirmCodeSelection(
+                      codeSelectModal.selectedIds,
+                      codeSelectModal.planType
+                    );
                   }}
                   className={`px-5 py-2 rounded-lg font-semibold transition-all ${
-                    codeSelectModal.selectedId
+                    codeSelectModal.selectedIds.length > 0
                       ? "bg-orange-500 text-white hover:bg-orange-600"
                       : "bg-gray-300 text-gray-500 cursor-not-allowed"
                   }`}
@@ -764,6 +811,14 @@ const WorkspacePricing = () => {
                 <h3 className="text-2xl font-semibold text-gray-800 mb-4">
                   {modalData.title} - {modalData.planType} Plan
                 </h3>
+
+                {modalData.seatCount > 1 && (
+                  <div className="mb-4 text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                    <strong>Note:</strong> You are booking {modalData.seatCount}{" "}
+                    seats: {modalData.selectedCodes}
+                  </div>
+                )}
+
                 <p className="text-gray-600 mb-4">
                   Choose your required timings for the workspace plan &{" "}
                   {modalData.planType.toLowerCase()} pack
@@ -886,6 +941,8 @@ const WorkspacePricing = () => {
                           min="1"
                           max={modalData.capacity}
                           value={numAttendees}
+                          // If seats > 1, we assume attendees matched to seats, or let them override for conference rooms
+                          // For standard desks, seatCount dictates quantity
                           onChange={(e) => {
                             const val = Math.max(
                               1,
@@ -898,6 +955,11 @@ const WorkspacePricing = () => {
                           }}
                           className="w-full border border-gray-300 rounded-lg px-4 py-2"
                           placeholder={`Max ${modalData.capacity} persons`}
+                          // Lock it if we have multiple seats selected and it's NOT a conference room
+                          disabled={
+                            modalData.seatCount > 1 &&
+                            modalData.title !== "Video Conferencing"
+                          }
                         />
                       </div>
                     )}
@@ -1067,6 +1129,20 @@ const WorkspacePricing = () => {
                       className="w-full border rounded-lg px-3 py-2"
                     />
                   </div>
+
+                  {/* Show Selected Seat Codes if multiple */}
+                  {modalData.seatCount > 1 && (
+                    <div className="col-span-2">
+                      <label className="block text-gray-700 mb-1">
+                        Selected Seats ({modalData.seatCount})
+                      </label>
+                      <input
+                        value={modalData.selectedCodes}
+                        readOnly
+                        className="w-full border rounded-lg px-3 py-2 bg-orange-50 font-medium"
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-gray-700 mb-1">
@@ -1260,6 +1336,8 @@ const WorkspacePricing = () => {
                         total_hours: totalHours,
                         num_attendees: numAttendees,
                         final_amount: parseFloat(finalTotal),
+                        // Pass specific seats for cart display
+                        seat_codes: modalData.selectedCodes,
                       };
                       addToCart(bookingItem);
                       toast.success("✅ Added to cart!");
@@ -1285,6 +1363,8 @@ const WorkspacePricing = () => {
                             end_date: endDate,
                             start_time: startTime,
                             end_time: endTime,
+                            // Pass all selected IDs to check multiple availability
+                            all_space_ids: modalData.allIds || [modalData.id],
                           }),
                         }
                       ).then((res) => res.json());
@@ -1334,6 +1414,8 @@ const WorkspacePricing = () => {
                       const bookingData = {
                         user_id: getUserId(),
                         space_id: modalData.id,
+                        // NEW: Pass all IDs if backend supports it, otherwise primary ID + num_attendees helps logic
+                        all_space_ids: modalData.allIds || [modalData.id],
                         workspace_title: modalData.title,
                         plan_type: modalData.planType,
                         start_date: startDate,
@@ -1342,7 +1424,7 @@ const WorkspacePricing = () => {
                         end_time: endTime || null,
                         total_days: days,
                         total_hours: totalHours,
-                        num_attendees: numAttendees,
+                        num_attendees: numAttendees, // This now reflects total seats for multiple booking
                         price_per_unit: modalData.price,
                         base_amount: displayAmount,
                         gst_amount: parseFloat(displayGst),
@@ -1351,6 +1433,8 @@ const WorkspacePricing = () => {
                         coupon_code: coupon || null,
                         referral_source: referral || null,
                         terms_accepted: termsAccepted ? 1 : 0,
+                        // 🟢 ADD THIS LINE HERE:
+                        seat_codes: modalData.selectedCodes, // Passes "WS01, WS02" string to backend
                       };
 
                       // 1️⃣ Create Razorpay Order
@@ -1429,6 +1513,8 @@ const WorkspacePricing = () => {
                                                 coupon_code: coupon || null,
                                                 referral_source:
                                                   referral || null,
+                                                seat_codes:
+                                                  modalData.selectedCodes,
                                               }),
                                             }
                                           )
