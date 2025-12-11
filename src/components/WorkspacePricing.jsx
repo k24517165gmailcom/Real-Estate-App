@@ -43,6 +43,23 @@ const generateTimeOptions = () => {
   return times;
 };
 
+// Generate next 12 months for Monthly Plan dropdown
+const generateMonthOptions = () => {
+  const options = [];
+  const today = new Date();
+  
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    const label = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const value = `${year}-${month}-01`;
+    options.push({ value, label });
+  }
+  return options;
+};
+
+const MONTH_OPTIONS = generateMonthOptions();
 const TIME_OPTIONS = generateTimeOptions();
 
 const format24HourTo12Hour = (time24) => {
@@ -487,6 +504,71 @@ const WorkspacePricing = () => {
   const displayGst = (displayAmount * 0.18).toFixed(0);
   const totalPreDiscount = (displayAmount + Number(displayGst)).toFixed(0);
   const finalTotal = calculateTotal().toFixed(0);
+
+  // 🟢 NEW: Check Availability function (Runs BEFORE Step 2)
+  const checkAvailabilityAndProceed = async () => {
+    if (!startDate) return;
+    if (modalData.planType === "Hourly" && (!startTime || !endTime)) return;
+
+    // Show loading toast
+    const toastId = toast.loading("Checking availability...");
+
+    try {
+        // Calculate a fallback end date if one isn't set yet (e.g. initial Monthly selection)
+        // For Monthly, we assume at least 1 month duration for the initial check.
+        let checkEndDate = endDate;
+        if (!checkEndDate && modalData.planType === "Monthly") {
+             const s = new Date(startDate);
+             s.setMonth(s.getMonth() + 1);
+             s.setDate(s.getDate() - 1);
+             checkEndDate = s.toISOString().split("T")[0];
+        } else if (!checkEndDate) {
+             checkEndDate = startDate; // For Daily/Hourly default to start date
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/check_workspace_availability.php`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                space_id: modalData.id,
+                plan_type: modalData.planType.toLowerCase(),
+                start_date: startDate,
+                end_date: checkEndDate,
+                start_time: startTime,
+                end_time: endTime,
+                all_space_ids: modalData.allIds || [modalData.id],
+            }),
+        });
+
+        const data = await response.json();
+        toast.dismiss(toastId); // Remove loading
+
+        if (data.success) {
+            // ✅ Success: Move to Step 2
+            setStep(2);
+        } else {
+            // ❌ Error: Show toast with available slots details
+            if (data.available_slots?.length) {
+                const slots = data.available_slots.map((slot) => `• ${slot}`).join("\n");
+                toast.error(
+                    <div>
+                        <p className="font-bold">{data.message}</p>
+                        <div className="mt-2 text-xs bg-white text-red-600 p-2 rounded max-h-40 overflow-auto">
+                            <strong>Available Slots:</strong>
+                            <pre className="whitespace-pre-wrap mt-1">{slots}</pre>
+                        </div>
+                    </div>,
+                    { autoClose: 8000 }
+                );
+            } else {
+                toast.error(data.message || "Selected slot is unavailable.");
+            }
+        }
+    } catch (err) {
+        toast.dismiss(toastId);
+        toast.error("Network error checking availability.");
+    }
+  };
 
   // Helper to render each seat
   // UPDATED: Now toggles selection instead of replacing it
@@ -1015,6 +1097,7 @@ const WorkspacePricing = () => {
                   Accept Terms & Conditions
                 </label>
 
+                {/* 🟢 UPDATED: Calls checkAvailabilityAndProceed instead of changing step directly */}
                 <button
                   disabled={
                     !termsAccepted ||
@@ -1025,7 +1108,7 @@ const WorkspacePricing = () => {
                         totalHours <= 0 ||
                         numAttendees < 1))
                   }
-                  onClick={() => setTimeout(() => setStep(2), 0)}
+                  onClick={checkAvailabilityAndProceed}
                   className={`w-full py-2 rounded-lg font-medium transition ${
                     termsAccepted &&
                     startDate &&
