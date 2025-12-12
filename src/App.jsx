@@ -1,5 +1,10 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 import Header from "./components/Header";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -17,7 +22,7 @@ import Profile from "./pages/Profile";
 import CompanyProfile from "./pages/CompanyProfile";
 import Reservations from "./pages/Reservations";
 import Visitors from "./pages/Visitors";
-import VisitorsList from "./pages/VisitorsList"; // ✅ NEW IMPORT
+import VisitorsList from "./pages/VisitorsList";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // 🧑‍💼 Admin Layout + Login
@@ -27,6 +32,8 @@ import ProtectedRouteAdmin from "./components/ProtectedRouteAdmin";
 
 // 🧩 Admin Pages
 import AdminDashboard from "./pages/Admin/AdminDashboard";
+// ✅ NEW IMPORT: Admin Occupancy Graph Dashboard
+import AdminOccupancyDashboard from "./pages/Admin/AdminOccupancyDashboard";
 
 // 2️⃣ User Management
 import AddUser from "./pages/Admin/AddUser";
@@ -65,6 +72,8 @@ import AdminSettings from "./pages/Admin/AdminSettings";
 // 📰 Blog Pages
 import BlogPage from "./pages/BlogPage";
 import BlogDetails from "./pages/BlogDetails";
+import AdminSeatMapView from "./pages/Admin/AdminSeatMapView";
+import AdminBlueprintView from "./pages/Admin/AdminBlueprintView";
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -75,7 +84,7 @@ const Layout = ({ children }) => {
     "/company-profile",
     "/reservations",
     "/visitors",
-    "/visitors-list", // ✅ ensure header hidden here too
+    "/visitors-list",
     "/admin",
   ];
 
@@ -97,7 +106,6 @@ const App = () => {
     <Router>
       <Layout>
         <Routes>
-
           {/* 🌐 Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/gallery" element={<Gallery />} />
@@ -148,7 +156,6 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-          {/* ✅ New Visitors List Route */}
           <Route
             path="/visitors-details"
             element={
@@ -172,6 +179,40 @@ const App = () => {
               </ProtectedRouteAdmin>
             }
           />
+
+          {/* ✅ NEW ROUTE: Admin Occupancy Graph Dashboard */}
+          <Route
+            path="/admin/occupancy"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <AdminOccupancyDashboard />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+
+          <Route
+            path="/admin/occupancyy"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <AdminSeatMapView /> {/* 👈 Uses the Grid View now */}
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+
+          <Route
+  path="/admin/occupancyyy"
+  element={
+    <ProtectedRouteAdmin>
+      <AdminLayout>
+        <AdminBlueprintView />
+      </AdminLayout>
+    </ProtectedRouteAdmin>
+  }
+/>
 
           {/* 2️⃣ User Management */}
           <Route
