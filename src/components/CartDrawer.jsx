@@ -27,12 +27,9 @@ const CartDrawer = ({ open, onClose }) => {
     if (cart.length === 0) return toast.error("Your cart is empty!");
 
     const loaded = await loadRazorpayScript();
-    if (!loaded) {
-      toast.error("Razorpay SDK failed to load. Please check your connection.");
-      return;
-    }
+    if (!loaded) return toast.error("Razorpay SDK failed to load.");
 
-    // ✅ Create order dynamically via env URL
+    // 1. Create Order
     const createOrderRes = await fetch(`${API_URL}/create_razorpay_order.php`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -40,10 +37,7 @@ const CartDrawer = ({ open, onClose }) => {
     });
     const orderData = await createOrderRes.json();
 
-    if (!orderData.success) {
-      toast.error(orderData.message || "Failed to create order.");
-      return;
-    }
+    if (!orderData.success) return toast.error(orderData.message || "Failed to create order.");
 
     const options = {
       key: orderData.key,
@@ -54,7 +48,8 @@ const CartDrawer = ({ open, onClose }) => {
       order_id: orderData.order_id,
       theme: { color: "#F97316" },
       handler: async function (response) {
-        // ✅ Verify payment dynamically
+        
+        // 2. Verify Payment
         const verifyRes = await fetch(`${API_URL}/verify_payment.php`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -62,17 +57,13 @@ const CartDrawer = ({ open, onClose }) => {
         });
         const verifyData = await verifyRes.json();
 
-        if (!verifyData.success) {
-          toast.error("Payment verification failed!");
-          return;
-        }
+        if (!verifyData.success) return toast.error("Payment verification failed!");
 
-        // ✅ Add all cart bookings dynamically
+        // 3. Prepare Bulk Data
         const user = JSON.parse(localStorage.getItem("user"));
         const userId = user?.id || null;
 
-        for (const booking of cart) {
-          const bookingData = {
+        const bulkBookingData = cart.map((booking) => ({
             user_id: userId,
             space_id: booking.id,
             workspace_title: booking.title,
@@ -88,61 +79,48 @@ const CartDrawer = ({ open, onClose }) => {
             coupon_code: booking.coupon_code || null,
             referral_source: booking.referral || null,
             terms_accepted: 1,
-          };
+            payment_id: response.razorpay_payment_id,
+            
+            // 🟢 FIXED: Include seat codes in the payload to backend
+            seat_codes: booking.seat_codes || "" 
+        }));
 
-          await fetch(`${API_URL}/add_workspace_booking.php`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(bookingData),
-          });
-        }
-
-        // ✅ Send confirmation email dynamically
-        const emailPayload = {
-          user_id: userId,
-          user_email: user?.email,
-          total_amount: totalAmount,
-          coupon_code: null,
-          referral_source: null,
-          bookings: cart.map((item) => ({
-            workspace_title: item.title,
-            plan_type: item.plan_type,
-            start_date: item.start_date,
-            end_date: item.end_date,
-            start_time: item.start_time,
-            end_time: item.end_time,
-            final_amount: item.final_amount,
-            coupon_code: item.coupon_code || null,
-            referral_source: item.referral || null,
-          })),
-        };
-
-        await fetch(`${API_URL}/send_booking_email.php`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(emailPayload),
-        })
-          .then((res) => res.json())
-          .then((emailRes) => {
-            if (emailRes.success) {
-              toast.success("📧 Confirmation email sent!");
-            } else {
-              toast.warn("Email failed: " + emailRes.message);
+        // 4. Send Bulk Request
+        try {
+            const bookingRes = await fetch(`${API_URL}/add_bulk_bookings.php`, { 
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ bookings: bulkBookingData }),
+            });
+            
+            const bookingResult = await bookingRes.json();
+            
+            if(!bookingResult.success) {
+                throw new Error(bookingResult.message);
             }
-          })
-          .catch((err) => {
-            console.error("Email send error:", err);
-            toast.warn("Booking saved, but email sending failed.");
-          });
 
-        toast.success("🎉 All bookings confirmed!");
-        clearCart();
-        onClose();
-      },
-      modal: {
-        ondismiss: () => {
-          toast.info("Payment cancelled");
-        },
+            // 5. Send Email
+            const emailPayload = {
+                user_id: userId,
+                user_email: user?.email,
+                total_amount: totalAmount,
+                bookings: cart 
+            };
+
+            await fetch(`${API_URL}/send_booking_email.php`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(emailPayload),
+            });
+
+            toast.success("🎉 All bookings confirmed!");
+            clearCart();
+            onClose();
+
+        } catch (error) {
+            console.error("Booking Error:", error);
+            toast.error("Payment successful, but booking failed. Contact support.");
+        }
       },
     };
 
@@ -181,7 +159,15 @@ const CartDrawer = ({ open, onClose }) => {
                     <div key={idx} className="border-b py-3">
                       <h4 className="font-semibold text-gray-800">{item.title}</h4>
                       <p className="text-sm text-gray-600">{item.plan_type}</p>
-                      <p className="text-sm text-gray-500">
+                      
+                      {/* 🟢 FIXED: Display Selected Seats in the Cart UI */}
+                      {item.seat_codes && (
+                        <p className="text-xs text-blue-600 font-medium mt-1">
+                           Seats: {item.seat_codes}
+                        </p>
+                      )}
+
+                      <p className="text-sm text-gray-500 mt-1">
                         {item.start_date} → {item.end_date}
                       </p>
                       <p className="text-orange-600 font-medium">₹{item.final_amount}</p>

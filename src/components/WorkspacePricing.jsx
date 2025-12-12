@@ -666,7 +666,7 @@ const WorkspacePricing = () => {
   return (
     <section
       id="WorkSpaces"
-      className="container mx-auto px-6 md:px-20 lg:px-32 py-20"
+      className="container mx-auto px-6 md:px-20 lg:px-32 py-20 relative"
     >
       <ToastContainer position="top-center" autoClose={2000} />
 
@@ -1720,12 +1720,15 @@ const WorkspacePricing = () => {
         open={cartOpen}
         onClose={() => setCartOpen(false)}
         onCheckout={() => {
-          // 🔸 Optional: call your Razorpay logic for totalAmount
           toast.info("Proceeding to checkout...");
         }}
       />
 
-      <FloatingCartButton onClick={() => setCartOpen(true)} />
+      {/* 🟡 UPDATED: Uses 'absolute' so it scrolls away with the component */}
+      {/* right-0 or right-4 places it nicely in the padding area on the right */}
+      <div className="absolute top-1/2 right-4 transform -translate-y-1/2 z-10">
+        <FloatingCartButton onClick={() => setCartOpen(true)} />
+      </div>
     </section>
   );
 };
