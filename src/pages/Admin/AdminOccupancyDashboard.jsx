@@ -13,20 +13,21 @@ import {
   Cell,
 } from "recharts";
 import { motion } from "framer-motion";
-import { RefreshCcw, LayoutDashboard, CheckCircle, XCircle } from "lucide-react";
+import { RefreshCcw, LayoutDashboard, CheckCircle, XCircle, MapPin, Monitor, Users } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const COLORS = {
-  Available: "#22c55e", // Green-500
-  Booked: "#ef4444",    // Red-500
-  Maintenance: "#f59e0b", // Amber-500
+  Available: "#22c55e", 
+  Booked: "#ef4444",    
+  Maintenance: "#f59e0b", 
 };
 
 const AdminOccupancyDashboard = () => {
   const [spaces, setSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [activeTab, setActiveTab] = useState("All");
 
   const fetchData = () => {
     setLoading(true);
@@ -44,19 +45,16 @@ const AdminOccupancyDashboard = () => {
 
   useEffect(() => {
     fetchData();
-    // Optional: Auto-refresh every 30 seconds
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // 1. Calculate Data for PIE CHART (Overall Status)
+  // 1. PIE CHART DATA
   const pieData = useMemo(() => {
     let available = 0;
     let booked = 0;
 
     spaces.forEach((s) => {
-      // Assuming 'is_available' comes as string "1"/"0" or boolean from PHP
-      // Adjust logic based on your exact API response type
       const isFree = s.is_available == 1 || s.is_available === true;
       if (isFree) available++;
       else booked++;
@@ -68,25 +66,31 @@ const AdminOccupancyDashboard = () => {
     ];
   }, [spaces]);
 
-  // 2. Calculate Data for BAR CHART (Category Breakdown)
+  // 2. BAR CHART DATA
   const barData = useMemo(() => {
     const map = {};
-
     spaces.forEach((s) => {
-      const type = s.space; // e.g., "Hot Desk", "Private Cabin"
+      const type = s.space;
       if (!map[type]) {
         map[type] = { name: type, Available: 0, Booked: 0 };
       }
-
       const isFree = s.is_available == 1 || s.is_available === true;
       if (isFree) map[type].Available += 1;
       else map[type].Booked += 1;
     });
-
     return Object.values(map);
   }, [spaces]);
 
-  // Calculate quick stats
+  // 3. GROUP DATA FOR SEAT MAP
+  const spacesByType = useMemo(() => {
+    const grouped = {};
+    spaces.forEach((s) => {
+      if (!grouped[s.space]) grouped[s.space] = [];
+      grouped[s.space].push(s);
+    });
+    return grouped;
+  }, [spaces]);
+
   const totalSpaces = spaces.length;
   const totalBooked = pieData.find((d) => d.name === "Booked")?.value || 0;
   const occupancyRate = totalSpaces > 0 ? ((totalBooked / totalSpaces) * 100).toFixed(1) : 0;
@@ -141,9 +145,8 @@ const AdminOccupancyDashboard = () => {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        {/* Bar Chart: Detailed Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Bar Chart */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -152,10 +155,7 @@ const AdminOccupancyDashboard = () => {
           <h3 className="text-lg font-semibold text-gray-700 mb-6">Type Breakdown</h3>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={barData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              >
+              <BarChart data={barData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis allowDecimals={false} />
@@ -164,7 +164,6 @@ const AdminOccupancyDashboard = () => {
                   cursor={{ fill: '#f3f4f6' }}
                 />
                 <Legend />
-                {/* Stacked Bars */}
                 <Bar dataKey="Available" stackId="a" fill={COLORS.Available} radius={[0, 0, 4, 4]} />
                 <Bar dataKey="Booked" stackId="a" fill={COLORS.Booked} radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -172,7 +171,7 @@ const AdminOccupancyDashboard = () => {
           </div>
         </motion.div>
 
-        {/* Pie Chart: Overall Ratio */}
+        {/* Pie Chart */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -198,7 +197,6 @@ const AdminOccupancyDashboard = () => {
                 </Pie>
                 <Tooltip />
                 <Legend verticalAlign="bottom" height={36}/>
-                {/* Center Text overlay */}
                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
                   <tspan x="50%" dy="-10" fontSize="24" fontWeight="bold" fill="#374151">
                     {totalBooked}
@@ -212,11 +210,98 @@ const AdminOccupancyDashboard = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* --- VISUAL SEAT MAP: TABBED VIEW --- */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <MapPin className="text-indigo-500" /> Floor Status
+            </h2>
+            
+            {/* Filter Tabs */}
+            <div className="flex flex-wrap gap-2">
+                <button
+                    onClick={() => setActiveTab("All")}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all border
+                        ${activeTab === "All" 
+                            ? "bg-gray-800 text-white border-gray-800" 
+                            : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"}`}
+                >
+                    All Areas
+                </button>
+                {Object.keys(spacesByType).map((type) => (
+                    <button
+                        key={type}
+                        onClick={() => setActiveTab(type)}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all border
+                            ${activeTab === type 
+                                ? "bg-indigo-600 text-white border-indigo-600 shadow-md" 
+                                : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"}`}
+                    >
+                        {type}
+                    </button>
+                ))}
+            </div>
+        </div>
+
+        {/* Dynamic Content Area */}
+        <motion.div 
+            layout 
+            className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3"
+        >
+            {/* Logic: If 'All', show everything flattened. If specific tab, show only that list. */}
+            {(activeTab === "All" ? spaces : spacesByType[activeTab]).map((space) => {
+                const isAvailable = space.is_available == 1 || space.is_available === true;
+                const displayCode = space.space_code || space.id || "#";
+                const type = space.space; // Ensure your API provides this in the flat list
+
+                // Skip if we are in specific tab mode (handled by mapped logic, but double check for 'All')
+                if (activeTab !== "All" && space.space !== activeTab) return null;
+
+                return (
+                    <motion.div 
+                        layout
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        key={space.id} 
+                        className={`
+                            relative group p-2 rounded-lg border transition-all cursor-pointer flex flex-col items-center justify-center min-h-[70px]
+                            ${isAvailable 
+                                ? "border-green-200 bg-green-50/50 hover:bg-green-100" 
+                                : "border-red-200 bg-red-50/50 hover:bg-red-100"}
+                        `}
+                    >
+                         {/* Badge for Type (Only show in 'All' view to give context) */}
+                        {activeTab === "All" && (
+                            <span className="text-[9px] text-gray-400 font-medium mb-1 truncate w-full text-center">
+                                {type}
+                            </span>
+                        )}
+
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 shadow-sm ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            <span className="text-[10px] font-bold">{displayCode}</span>
+                        </div>
+                        
+                        <div className="absolute bottom-full mb-2 hidden group-hover:block w-32 bg-gray-900 text-white text-xs rounded p-2 z-20 text-center shadow-xl">
+                            <p className="font-bold text-gray-300">{type}</p>
+                            <p>Seat: {displayCode}</p>
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                    </motion.div>
+                );
+            })}
+        </motion.div>
+        
+        {/* Empty State if needed */}
+        {spaces.length === 0 && (
+            <div className="text-center py-10 text-gray-400">No spaces found.</div>
+        )}
+      </div>
     </div>
   );
 };
 
-// Helper Component for the Top Cards
+// Top Stat Card Component
 const StatCard = ({ title, value, icon, color }) => (
   <motion.div 
     whileHover={{ scale: 1.02 }}
