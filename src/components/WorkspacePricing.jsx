@@ -9,7 +9,7 @@ import FloatingCartButton from "../components/FloatingCartButton";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-// Helper to get logged-in user id (same as yours)
+// Helper to get logged-in user id
 const getUserId = () => {
   try {
     const user = JSON.parse(localStorage.getItem("user"));
@@ -19,7 +19,6 @@ const getUserId = () => {
   }
 };
 
-// Day maps and time helpers copied from your original file:
 const DAY_ABBREVIATIONS_MAP = {
   Sunday: "Sun",
   Monday: "Mon",
@@ -32,7 +31,7 @@ const DAY_ABBREVIATIONS_MAP = {
 
 const generateTimeOptions = () => {
   const times = [];
-  // Workspace hours 08:00 AM → 07:59 PM (so include 19 = 7 PM)
+  // Workspace hours 08:00 AM → 07:59 PM
   for (let i = 8; i <= 19; i++) {
     const hour = i % 12 === 0 ? 12 : i % 12;
     const ampm = i < 12 ? "AM" : "PM";
@@ -43,11 +42,9 @@ const generateTimeOptions = () => {
   return times;
 };
 
-// Generate next 12 months for Monthly Plan dropdown
 const generateMonthOptions = () => {
   const options = [];
   const today = new Date();
-  
   for (let i = 0; i < 12; i++) {
     const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
     const label = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -137,7 +134,7 @@ const WorkspacePricing = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Modal & booking states (kept same as your original)
+  // Modal & booking states
   const [modalData, setModalData] = useState(null);
   const [step, setStep] = useState(1);
   const [startDate, setStartDate] = useState("");
@@ -152,10 +149,8 @@ const WorkspacePricing = () => {
   const [totalHours, setTotalHours] = useState(1);
   const [numAttendees, setNumAttendees] = useState(1);
 
-  // NEW: data for the small radio popup to pick a space code
-  // UPDATED: Now uses `selectedIds` (array) instead of `selectedId` (single)
+  // Seat selection modal
   const [codeSelectModal, setCodeSelectModal] = useState(null);
-  // structure: { groupTitle, codes: [{id, code, raw}], planType, price, selectedIds: [] }
 
   const { addToCart } = useCart();
   const [cartOpen, setCartOpen] = useState(false);
@@ -193,9 +188,7 @@ const WorkspacePricing = () => {
       });
   }, [API_BASE_URL]);
 
-  // GROUP workspaces by title + pricing (so duplicates with same pricing collapse)
   const groupedWorkspaces = useMemo(() => {
-    // key by title + hourly + daily + monthly for grouping
     const map = new Map();
     workspaces.forEach((w) => {
       const key = `${w.title}||${w.hourly ?? 0}||${w.daily ?? 0}||${
@@ -219,28 +212,22 @@ const WorkspacePricing = () => {
     return Array.from(map.values());
   }, [workspaces]);
 
-  // Auth check (same as yours)
   const isAuthenticated = () => {
     const user = localStorage.getItem("user");
     return !!user;
   };
 
-  // Auto-set end date logic (preserved)
   useEffect(() => {
     if (!startDate || !modalData?.planType) return;
     const start = new Date(startDate);
     let end = new Date(start);
 
-    // 🟢 UPDATED: Only auto-set end date for Daily/Hourly. 
-    // For Monthly, we let the new Dropdown handle it (or default to 1 month initially)
     if (modalData.planType === "Monthly") {
-      // If endDate is empty, default to 1 month
       if (!endDate) {
-          end.setMonth(start.getMonth() + 1);
-          end.setDate(end.getDate() - 1);
-          setEndDate(end.toISOString().split("T")[0]);
+        end.setMonth(start.getMonth() + 1);
+        end.setDate(end.getDate() - 1);
+        setEndDate(end.toISOString().split("T")[0]);
       }
-      // If endDate is already set (via dropdown), do nothing here
     } else if (modalData.planType === "Daily") {
       end = new Date(start);
       setEndDate(end.toISOString().split("T")[0]);
@@ -250,7 +237,6 @@ const WorkspacePricing = () => {
     }
   }, [startDate, modalData?.planType]);
 
-  // Days calculation
   useEffect(() => {
     if (startDate && endDate) {
       const s = new Date(startDate);
@@ -262,17 +248,14 @@ const WorkspacePricing = () => {
     }
   }, [startDate, endDate]);
 
-  // Auto-update End Time for Hourly
   useEffect(() => {
     if (modalData?.planType === "Hourly" && startTime) {
       const startHour = parseInt(startTime.split(":")[0]);
-      // Ensure the end time doesn't go beyond 7:59 PM (19:59)
       const endHour = Math.min(19, startHour);
       setEndTime(`${endHour.toString().padStart(2, "0")}:59`);
     }
   }, [startTime, modalData?.planType]);
 
-  // Coupons
   const handleApplyCoupon = async () => {
     if (!coupon) return toast.error("Please enter a coupon code");
 
@@ -303,26 +286,18 @@ const WorkspacePricing = () => {
     }
   };
 
-  // UPDATED: Billing calculations to handle Multiple Seats
   const calculateBaseAmount = () => {
     const price = modalData?.price || 0;
-    // Get number of seats selected (default to 1)
     const count = modalData?.seatCount || 1;
 
     if (modalData?.planType === "Daily") {
       return price * days * count;
     }
     if (modalData?.planType === "Monthly") {
-      // 🟢 For monthly, 'days' variable holds actual days, but price is per month.
-      // We need to calculate how many MONTHS are selected.
-      // Approx calculation: days / 30
       const months = Math.max(1, Math.round(days / 30));
       return price * months * count;
     }
     if (modalData?.planType === "Hourly") {
-      // If "numAttendees" is used manually, we use that.
-      // If "seatCount" is > 1 (multiple codes selected), we use that as the multiplier.
-      // For logic safety: if seatCount > 1, it overrides numAttendees or acts as the base unit.
       const attendees = count > 1 ? count : numAttendees;
       return price * totalHours * days * attendees;
     }
@@ -352,16 +327,13 @@ const WorkspacePricing = () => {
     setCodeSelectModal(null);
   };
 
-  // When user clicks a Plan button on a grouped card:
   const handlePlanClick = (group, planType) => {
-    // Auth check first
     if (!isAuthenticated()) {
       toast.error("Please log in to book a workspace!");
       setTimeout(() => navigate("/auth"), 1000);
       return;
     }
 
-    // Normalize planType for consistent capitalization
     const normalizedPlan =
       planType.toLowerCase() === "hourly"
         ? "Hourly"
@@ -369,11 +341,10 @@ const WorkspacePricing = () => {
         ? "Daily"
         : "Monthly";
 
-    // If group has more than one code, open the small code selection modal (radio)
     if (group.items.length > 1) {
       setCodeSelectModal({
         groupTitle: group.title,
-        codes: group.items, // [{id, code, raw}]
+        codes: group.items,
         planType: normalizedPlan,
         price:
           normalizedPlan === "Hourly"
@@ -381,12 +352,11 @@ const WorkspacePricing = () => {
             : normalizedPlan === "Daily"
             ? group.daily
             : group.monthly,
-        selectedIds: [], // Start with empty selection
+        selectedIds: [],
       });
       return;
     }
 
-    // else (only one space code) proceed directly with selecting that workspace
     const sole = group.items[0];
     const chosenRaw = sole.raw;
 
@@ -404,11 +374,10 @@ const WorkspacePricing = () => {
           ? group.daily
           : group.monthly,
       raw: chosenRaw,
-      seatCount: 1, // Single seat
+      seatCount: 1,
       selectedCodes: sole.code,
     });
 
-    // set defaults
     setStartDate(new Date().toISOString().split("T")[0]);
     setEndDate("");
     setStep(1);
@@ -418,7 +387,7 @@ const WorkspacePricing = () => {
       now.setHours(now.getHours() + (now.getMinutes() > 0 ? 1 : 0), 0, 0, 0);
       const h = now.getHours();
       setStartTime(`${h.toString().padStart(2, "0")}:00`);
-      const nextHour = Math.min(19, h + 1); // 7 PM = max hour
+      const nextHour = Math.min(19, h + 1);
       setEndTime(`${nextHour.toString().padStart(2, "0")}:59`);
     } else {
       setStartTime("08:00");
@@ -428,15 +397,12 @@ const WorkspacePricing = () => {
     setNumAttendees(1);
   };
 
-  // Called when user confirms a code from the small popup
-  // UPDATED to accept array of IDs
   const confirmCodeSelection = (selectedIds, planType) => {
     if (!selectedIds || selectedIds.length === 0) {
       toast.error("Please select at least one seat.");
       return;
     }
 
-    // Identify selected items
     const selectedItems = workspaces.filter((w) => selectedIds.includes(w.id));
     if (selectedItems.length === 0) {
       toast.error("Selected space not found");
@@ -445,10 +411,8 @@ const WorkspacePricing = () => {
     }
 
     const primary = selectedItems[0];
-    // Create string of codes for display, e.g. "WS01, WS02"
     const codesString = selectedItems.map((i) => i.type).join(", ");
 
-    // Normalize planType for consistent capitalization
     const normalizedPlan =
       planType.toLowerCase() === "hourly"
         ? "Hourly"
@@ -457,11 +421,11 @@ const WorkspacePricing = () => {
         : "Monthly";
 
     setModalData({
-      id: primary.id, // Use primary ID for backend foreign key
-      allIds: selectedIds, // Store all IDs if needed later
+      id: primary.id,
+      allIds: selectedIds,
       title: primary.title,
       desc: primary.desc,
-      type: codesString, // Show all codes
+      type: codesString,
       capacity: primary.capacity,
       planType: normalizedPlan,
       price:
@@ -475,10 +439,8 @@ const WorkspacePricing = () => {
       selectedCodes: codesString,
     });
 
-    // close code selector
     setCodeSelectModal(null);
 
-    // initialize booking defaults
     setStartDate(new Date().toISOString().split("T")[0]);
     setEndDate("");
     setStep(1);
@@ -488,34 +450,28 @@ const WorkspacePricing = () => {
       now.setHours(now.getHours() + (now.getMinutes() > 0 ? 1 : 0), 0, 0, 0);
       const h = now.getHours();
       setStartTime(`${h.toString().padStart(2, "0")}:00`);
-      const nextHour = Math.min(19, h + 1); // 7 PM = max hour
+      const nextHour = Math.min(19, h + 1);
       setEndTime(`${nextHour.toString().padStart(2, "0")}:59`);
     } else {
       setStartTime("08:00");
       setEndTime("20:00");
     }
 
-    // Set numAttendees to match the number of seats selected
     setNumAttendees(selectedIds.length);
   };
 
-  // Display numbers for billing
   const displayAmount = calculateBaseAmount();
   const displayGst = (displayAmount * 0.18).toFixed(0);
   const totalPreDiscount = (displayAmount + Number(displayGst)).toFixed(0);
   const finalTotal = calculateTotal().toFixed(0);
 
-  // 🟢 NEW: Check Availability function (Runs BEFORE Step 2)
   const checkAvailabilityAndProceed = async () => {
     if (!startDate) return;
     if (modalData.planType === "Hourly" && (!startTime || !endTime)) return;
 
-    // Show loading toast
     const toastId = toast.loading("Checking availability...");
 
     try {
-        // Calculate a fallback end date if one isn't set yet (e.g. initial Monthly selection)
-        // For Monthly, we assume at least 1 month duration for the initial check.
         let checkEndDate = endDate;
         if (!checkEndDate && modalData.planType === "Monthly") {
              const s = new Date(startDate);
@@ -523,7 +479,7 @@ const WorkspacePricing = () => {
              s.setDate(s.getDate() - 1);
              checkEndDate = s.toISOString().split("T")[0];
         } else if (!checkEndDate) {
-             checkEndDate = startDate; // For Daily/Hourly default to start date
+             checkEndDate = startDate;
         }
         
         const response = await fetch(`${API_BASE_URL}/check_workspace_availability.php`, {
@@ -541,13 +497,11 @@ const WorkspacePricing = () => {
         });
 
         const data = await response.json();
-        toast.dismiss(toastId); // Remove loading
+        toast.dismiss(toastId);
 
         if (data.success) {
-            // ✅ Success: Move to Step 2
             setStep(2);
         } else {
-            // ❌ Error: Show toast with available slots details
             if (data.available_slots?.length) {
                 const slots = data.available_slots.map((slot) => `• ${slot}`).join("\n");
                 toast.error(
@@ -570,10 +524,7 @@ const WorkspacePricing = () => {
     }
   };
 
-  // Helper to render each seat
-  // UPDATED: Now toggles selection instead of replacing it
   const renderSeat = (c) => {
-    // Check if current ID is in the selected array
     const isSelected = codeSelectModal.selectedIds.includes(c.id);
     const isDisabled = !c.raw.is_available;
 
@@ -589,8 +540,6 @@ const WorkspacePricing = () => {
                 const reason = c.raw.availability_reason || "";
                 const endDate = c.raw.end_date || "";
                 const endTime = c.raw.end_time || "";
-
-                // If both date and time exist (hourly)
                 if (
                   endTime &&
                   endDate === new Date().toISOString().split("T")[0]
@@ -600,8 +549,6 @@ const WorkspacePricing = () => {
                   const ampm = hour >= 12 ? "PM" : "AM";
                   return `Booked until ${formattedHour}:${minute} ${ampm} today`;
                 }
-
-                // Fallback to backend-provided reason (for daily/monthly)
                 return reason;
               })()
             : isSelected
@@ -612,7 +559,6 @@ const WorkspacePricing = () => {
           if (!isDisabled) {
             setCodeSelectModal((prev) => {
               const current = prev.selectedIds;
-              // Toggle logic
               if (current.includes(c.id)) {
                 return {
                   ...prev,
@@ -638,18 +584,15 @@ const WorkspacePricing = () => {
     );
   };
 
-  // 🟢 NEW: Generate End Date Options for Step 2
   const monthlyEndOptions = useMemo(() => {
     if (!startDate || modalData?.planType !== "Monthly") return [];
     
     const options = [];
     const start = new Date(startDate);
 
-    // Generate up to 12 months ahead
     for (let i = 1; i <= 12; i++) {
         const end = new Date(start);
         end.setMonth(start.getMonth() + i);
-        // Subtract 1 day to complete the cycle (e.g., Jan 1 to Jan 31)
         end.setDate(end.getDate() - 1); 
         
         const dateStr = end.toISOString().split('T')[0];
@@ -770,7 +713,6 @@ const WorkspacePricing = () => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
             >
-              {/* ✕ Close button */}
               <button
                 onClick={() => setCodeSelectModal(null)}
                 className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-2xl"
@@ -788,15 +730,12 @@ const WorkspacePricing = () => {
                 Click to select multiple seats
               </p>
 
-              {/* Seat-style selection grid (Conditional Walkway) */}
               <div className="flex flex-col items-center gap-5 mb-6">
                 {(() => {
-                  // sort space codes so WS01 starts at top
                   const seats = [...codeSelectModal.codes].sort((a, b) =>
                     a.code.localeCompare(b.code, undefined, { numeric: true })
                   );
 
-                  // Check if we should show walkways
                   const noWalkway = [
                     "Team Leads Cubicle",
                     "Manager Cubicle",
@@ -805,21 +744,15 @@ const WorkspacePricing = () => {
 
                   return (
                     <>
-                      {/* Row 1 → first 3 */}
                       <div className="flex justify-center gap-4">
                         {seats.slice(0, 3).map(renderSeat)}
                       </div>
-                      {/* Walkway separator (only if allowed) */}
                       {!noWalkway && (
                         <div className="w-3/4 border-t border-gray-300 my-2"></div>
                       )}
-
-                      {/* Row 2 → next 7 */}
                       <div className="flex justify-center gap-4">
                         {seats.slice(3, 10).map(renderSeat)}
                       </div>
-
-                      {/* Row 3 → 7 front + 7 back */}
                       <div className="flex flex-col items-center gap-3">
                         <div className="flex justify-center gap-4">
                           {seats.slice(10, 17).map(renderSeat)}
@@ -831,8 +764,6 @@ const WorkspacePricing = () => {
                           {seats.slice(17, 24).map(renderSeat)}
                         </div>
                       </div>
-
-                      {/* Row 4 → 7 front + 7 back */}
                       <div className="flex flex-col items-center gap-3">
                         <div className="flex justify-center gap-4">
                           {seats.slice(24, 31).map(renderSeat)}
@@ -844,8 +775,6 @@ const WorkspacePricing = () => {
                           {seats.slice(31, 38).map(renderSeat)}
                         </div>
                       </div>
-
-                      {/* Row 5 → remaining 7 */}
                       <div className="flex justify-center gap-4">
                         {seats.slice(38, 45).map(renderSeat)}
                       </div>
@@ -854,7 +783,6 @@ const WorkspacePricing = () => {
                 })()}
               </div>
 
-              {/* Legend */}
               <div className="flex justify-center gap-6 text-sm text-gray-600 mb-6">
                 <div className="flex items-center gap-2">
                   <span className="w-5 h-5 bg-green-100 border border-green-300 rounded-md"></span>
@@ -870,7 +798,6 @@ const WorkspacePricing = () => {
                 </div>
               </div>
 
-              {/* Action buttons */}
               <div className="flex justify-end gap-3 items-center">
                 <span className="text-sm font-semibold text-gray-700 mr-2">
                   {codeSelectModal.selectedIds.length} seat(s) selected
@@ -903,7 +830,7 @@ const WorkspacePricing = () => {
         )}
       </AnimatePresence>
 
-      {/* Existing Booking Modal (Steps 1-3). Reused from your original with slight adjustments */}
+      {/* Booking Modal (Steps 1-3) */}
       <AnimatePresence>
         {modalData && (
           <motion.div
@@ -942,14 +869,27 @@ const WorkspacePricing = () => {
                   {modalData.planType.toLowerCase()} pack
                 </p>
 
-                {/* 🟢 REVERTED: Standard Date Picker for Start Date */}
                 <label className="block text-gray-700 mb-2">
                   Start Date:
                 </label>
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => {
+                    const dateStr = e.target.value;
+                    if (!dateStr) {
+                      setStartDate("");
+                      return;
+                    }
+                    // Check if selected day is Sunday
+                    const day = new Date(dateStr).getUTCDay(); // getUTCDay() works best for date inputs (YYYY-MM-DD parses to UTC)
+                    if (day === 0) {
+                      toast.error("Workspaces are closed on Sundays. Please select another date.");
+                      setStartDate(""); // Clear the invalid selection
+                    } else {
+                      setStartDate(dateStr);
+                    }
+                  }}
                   min={new Date().toISOString().split("T")[0]}
                   max={() => {
                     const maxDate = new Date();
@@ -988,7 +928,6 @@ const WorkspacePricing = () => {
                               startDate ===
                               new Date().toISOString().split("T")[0];
 
-                            // Hide or disable times that are in the past for today's date
                             const isPast =
                               isToday && t.value <= currentTimeValue;
 
@@ -1023,7 +962,6 @@ const WorkspacePricing = () => {
                               ? parseInt(startTime.split(":")[0])
                               : -1;
 
-                            // Workspace closes at 07:59 PM (19:59)
                             const options = [];
                             for (let i = startHour; i <= 19; i++) {
                               if (i >= startHour) {
@@ -1062,8 +1000,6 @@ const WorkspacePricing = () => {
                           min="1"
                           max={modalData.capacity}
                           value={numAttendees}
-                          // If seats > 1, we assume attendees matched to seats, or let them override for conference rooms
-                          // For standard desks, seatCount dictates quantity
                           onChange={(e) => {
                             const val = Math.max(
                               1,
@@ -1076,7 +1012,6 @@ const WorkspacePricing = () => {
                           }}
                           className="w-full border border-gray-300 rounded-lg px-4 py-2"
                           placeholder={`Max ${modalData.capacity} persons`}
-                          // Lock it if we have multiple seats selected and it's NOT a conference room
                           disabled={
                             modalData.seatCount > 1 &&
                             modalData.title !== "Video Conferencing"
@@ -1097,7 +1032,6 @@ const WorkspacePricing = () => {
                   Accept Terms & Conditions
                 </label>
 
-                {/* 🟢 UPDATED: Calls checkAvailabilityAndProceed instead of changing step directly */}
                 <button
                   disabled={
                     !termsAccepted ||
@@ -1170,7 +1104,6 @@ const WorkspacePricing = () => {
                       End Date:
                     </label>
                     
-                    {/* 🟢 CONDITIONAL: If Monthly, show Select Dropdown; else show Disabled Input */}
                     {modalData.planType === "Monthly" ? (
                         <select
                             value={endDate}
@@ -1271,7 +1204,6 @@ const WorkspacePricing = () => {
                     />
                   </div>
 
-                  {/* Show Selected Seat Codes if multiple */}
                   {modalData.seatCount > 1 && (
                     <div className="col-span-2">
                       <label className="block text-gray-700 mb-1">
@@ -1462,7 +1394,6 @@ const WorkspacePricing = () => {
                     « Back
                   </button>
 
-                  {/* 🛒 Add to Cart Button */}
                   <button
                     onClick={() => {
                       const bookingItem = {
@@ -1477,7 +1408,6 @@ const WorkspacePricing = () => {
                         total_hours: totalHours,
                         num_attendees: numAttendees,
                         final_amount: parseFloat(finalTotal),
-                        // Pass specific seats for cart display
                         seat_codes: modalData.selectedCodes,
                       };
                       addToCart(bookingItem);
@@ -1491,7 +1421,6 @@ const WorkspacePricing = () => {
 
                   <button
                     onClick={async () => {
-                      // 🟢 Step 0 — Check workspace availability before payment
                       const availabilityResponse = await fetch(
                         `${API_BASE_URL}/check_workspace_availability.php`,
                         {
@@ -1504,14 +1433,12 @@ const WorkspacePricing = () => {
                             end_date: endDate,
                             start_time: startTime,
                             end_time: endTime,
-                            // Pass all selected IDs to check multiple availability
                             all_space_ids: modalData.allIds || [modalData.id],
                           }),
                         }
                       ).then((res) => res.json());
 
                       if (!availabilityResponse.success) {
-                        // 🧠 If backend sends available slots, show them in a friendly way
                         if (availabilityResponse.available_slots?.length) {
                           const slots = availabilityResponse.available_slots
                             .map((slot) => `• ${slot}`)
@@ -1524,10 +1451,9 @@ const WorkspacePricing = () => {
                         } else {
                           toast.error(availabilityResponse.message);
                         }
-                        return; // ⛔ stop before payment
+                        return;
                       }
 
-                      // 🔹 Step 0 — Load Razorpay script dynamically before anything else
                       const loadRazorpayScript = () => {
                         return new Promise((resolve) => {
                           if (window.Razorpay) {
@@ -1551,11 +1477,9 @@ const WorkspacePricing = () => {
                         return;
                       }
 
-                      // 🧾 Your original code starts exactly as you had it
                       const bookingData = {
                         user_id: getUserId(),
                         space_id: modalData.id,
-                        // NEW: Pass all IDs if backend supports it, otherwise primary ID + num_attendees helps logic
                         all_space_ids: modalData.allIds || [modalData.id],
                         workspace_title: modalData.title,
                         plan_type: modalData.planType,
@@ -1565,7 +1489,7 @@ const WorkspacePricing = () => {
                         end_time: endTime || null,
                         total_days: days,
                         total_hours: totalHours,
-                        num_attendees: numAttendees, // This now reflects total seats for multiple booking
+                        num_attendees: numAttendees,
                         price_per_unit: modalData.price,
                         base_amount: displayAmount,
                         gst_amount: parseFloat(displayGst),
@@ -1574,11 +1498,9 @@ const WorkspacePricing = () => {
                         coupon_code: coupon || null,
                         referral_source: referral || null,
                         terms_accepted: termsAccepted ? 1 : 0,
-                        // 🟢 ADD THIS LINE HERE:
-                        seat_codes: modalData.selectedCodes, // Passes "WS01, WS02" string to backend
+                        seat_codes: modalData.selectedCodes,
                       };
 
-                      // 1️⃣ Create Razorpay Order
                       fetch(`${API_BASE_URL}/create_razorpay_order.php`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -1598,7 +1520,6 @@ const WorkspacePricing = () => {
                             description: `${modalData.title} Booking`,
                             order_id: data.order_id,
                             handler: function (response) {
-                              // 2️⃣ Verify payment on backend
                               fetch(`${API_BASE_URL}/verify_payment.php`, {
                                 method: "POST",
                                 headers: {
@@ -1609,7 +1530,7 @@ const WorkspacePricing = () => {
                                 .then((res) => res.json())
                                 .then((verify) => {
                                   if (verify.success) {
-                                    // 3️⃣ Add booking now
+                                    // 🟢 Add booking
                                     fetch(
                                       `${API_BASE_URL}/add_workspace_booking.php`,
                                       {
@@ -1623,12 +1544,20 @@ const WorkspacePricing = () => {
                                       .then((r) => r.json())
                                       .then((result) => {
                                         if (result.success) {
-                                          // ✅ Show toast immediately
                                           toast.success(
                                             "🎉 Booking confirmed! Sending confirmation email..."
                                           );
 
-                                          // 📨 Trigger backend email
+                                          // 🟢 Gather user info and booking ID
+                                          const userData = JSON.parse(
+                                            localStorage.getItem("user")
+                                          );
+                                          const userName =
+                                            userData?.name || "Customer";
+                                          const newBookingId =
+                                            result.booking_id || result.id || 0;
+
+                                          // 🟢 Send Email with Name and ID
                                           fetch(
                                             `${API_BASE_URL}/send_booking_email.php`,
                                             {
@@ -1638,11 +1567,11 @@ const WorkspacePricing = () => {
                                                   "application/json",
                                               },
                                               body: JSON.stringify({
+                                                booking_id: newBookingId,
+                                                user_name: userName,
                                                 user_id: getUserId(),
                                                 user_email:
-                                                  JSON.parse(
-                                                    localStorage.getItem("user")
-                                                  )?.email || "",
+                                                  userData?.email || "",
                                                 workspace_title:
                                                   modalData.title,
                                                 plan_type: modalData.planType,
@@ -1666,6 +1595,7 @@ const WorkspacePricing = () => {
                                                   "📧 Confirmation email sent!"
                                                 );
                                               } else {
+                                                console.error(emailRes);
                                                 toast.warn(
                                                   "Booking saved, but email failed: " +
                                                     emailRes.message
@@ -1673,16 +1603,12 @@ const WorkspacePricing = () => {
                                               }
                                             })
                                             .catch((err) => {
-                                              console.error(
-                                                "Email error:",
-                                                err
-                                              );
+                                              console.error("Email error:", err);
                                               toast.warn(
                                                 "Booking saved, but email sending failed."
                                               );
                                             });
 
-                                          // ✅ Reset after short delay
                                           setTimeout(() => resetState(), 2000);
                                         } else {
                                           toast.error(
@@ -1724,8 +1650,6 @@ const WorkspacePricing = () => {
         }}
       />
 
-      {/* 🟡 UPDATED: Uses 'absolute' so it scrolls away with the component */}
-      {/* right-0 or right-4 places it nicely in the padding area on the right */}
       <div className="absolute top-1/2 right-4 transform -translate-y-1/2 z-10">
         <FloatingCartButton onClick={() => setCartOpen(true)} />
       </div>
