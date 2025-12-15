@@ -48,7 +48,9 @@ const VirtualOfficeBookingModal = ({ isOpen, onClose }) => {
 
         if (data.status === "success" && data.data.length > 0) {
           const planData = data.data[0]; // only one plan
-          setPlan(`${planData.min_duration} - ${planData.max_duration}`);
+          //setPlan(`${planData.min_duration} - ${planData.max_duration}`);
+          setPlan(planData.min_duration);
+
           setPrice(planData.price);
         } else {
           toast.error("❌ No active plan found.");

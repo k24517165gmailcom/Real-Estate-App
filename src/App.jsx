@@ -74,6 +74,9 @@ import BlogPage from "./pages/BlogPage";
 import BlogDetails from "./pages/BlogDetails";
 import AdminSeatMapView from "./pages/Admin/AdminSeatMapView";
 import AdminBlueprintView from "./pages/Admin/AdminBlueprintView";
+import ContactComments from "./pages/Admin/ContactComments";
+import Amenities from "./components/Amenities";
+import EditContact from "./pages/Admin/EditContact";
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -110,6 +113,7 @@ const App = () => {
           <Route path="/" element={<Home />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/amenities" element={<Amenities />} />
           <Route path="/virtual" element={<VirtualOfficeServices />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/blog" element={<BlogPage />} />
@@ -204,15 +208,15 @@ const App = () => {
           />
 
           <Route
-  path="/admin/occupancyyy"
-  element={
-    <ProtectedRouteAdmin>
-      <AdminLayout>
-        <AdminBlueprintView />
-      </AdminLayout>
-    </ProtectedRouteAdmin>
-  }
-/>
+            path="/admin/occupancyyy"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <AdminBlueprintView />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
 
           {/* 2️⃣ User Management */}
           <Route
@@ -321,6 +325,28 @@ const App = () => {
               <ProtectedRouteAdmin>
                 <AdminLayout>
                   <ContactList />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+
+          <Route
+            path="/admin/contact-comments/:id"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <ContactComments />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+
+          <Route
+            path="/admin/edit-contact/:id"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <EditContact />
                 </AdminLayout>
               </ProtectedRouteAdmin>
             }

@@ -47,7 +47,10 @@ const generateMonthOptions = () => {
   const today = new Date();
   for (let i = 0; i < 12; i++) {
     const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
-    const label = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const label = d.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const value = `${year}-${month}-01`;
@@ -472,55 +475,60 @@ const WorkspacePricing = () => {
     const toastId = toast.loading("Checking availability...");
 
     try {
-        let checkEndDate = endDate;
-        if (!checkEndDate && modalData.planType === "Monthly") {
-             const s = new Date(startDate);
-             s.setMonth(s.getMonth() + 1);
-             s.setDate(s.getDate() - 1);
-             checkEndDate = s.toISOString().split("T")[0];
-        } else if (!checkEndDate) {
-             checkEndDate = startDate;
+      let checkEndDate = endDate;
+      if (!checkEndDate && modalData.planType === "Monthly") {
+        const s = new Date(startDate);
+        s.setMonth(s.getMonth() + 1);
+        s.setDate(s.getDate() - 1);
+        checkEndDate = s.toISOString().split("T")[0];
+      } else if (!checkEndDate) {
+        checkEndDate = startDate;
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/check_workspace_availability.php`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            space_id: modalData.id,
+            plan_type: modalData.planType.toLowerCase(),
+            start_date: startDate,
+            end_date: checkEndDate,
+            start_time: startTime,
+            end_time: endTime,
+            all_space_ids: modalData.allIds || [modalData.id],
+          }),
         }
-        
-        const response = await fetch(`${API_BASE_URL}/check_workspace_availability.php`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                space_id: modalData.id,
-                plan_type: modalData.planType.toLowerCase(),
-                start_date: startDate,
-                end_date: checkEndDate,
-                start_time: startTime,
-                end_time: endTime,
-                all_space_ids: modalData.allIds || [modalData.id],
-            }),
-        });
+      );
 
-        const data = await response.json();
-        toast.dismiss(toastId);
+      const data = await response.json();
+      toast.dismiss(toastId);
 
-        if (data.success) {
-            setStep(2);
+      if (data.success) {
+        setStep(2);
+      } else {
+        if (data.available_slots?.length) {
+          const slots = data.available_slots
+            .map((slot) => `• ${slot}`)
+            .join("\n");
+          toast.error(
+            <div>
+              <p className="font-bold">{data.message}</p>
+              <div className="mt-2 text-xs bg-white text-red-600 p-2 rounded max-h-40 overflow-auto">
+                <strong>Available Slots:</strong>
+                <pre className="whitespace-pre-wrap mt-1">{slots}</pre>
+              </div>
+            </div>,
+            { autoClose: 8000 }
+          );
         } else {
-            if (data.available_slots?.length) {
-                const slots = data.available_slots.map((slot) => `• ${slot}`).join("\n");
-                toast.error(
-                    <div>
-                        <p className="font-bold">{data.message}</p>
-                        <div className="mt-2 text-xs bg-white text-red-600 p-2 rounded max-h-40 overflow-auto">
-                            <strong>Available Slots:</strong>
-                            <pre className="whitespace-pre-wrap mt-1">{slots}</pre>
-                        </div>
-                    </div>,
-                    { autoClose: 8000 }
-                );
-            } else {
-                toast.error(data.message || "Selected slot is unavailable.");
-            }
+          toast.error(data.message || "Selected slot is unavailable.");
         }
+      }
     } catch (err) {
-        toast.dismiss(toastId);
-        toast.error("Network error checking availability.");
+      toast.dismiss(toastId);
+      toast.error("Network error checking availability.");
     }
   };
 
@@ -586,22 +594,26 @@ const WorkspacePricing = () => {
 
   const monthlyEndOptions = useMemo(() => {
     if (!startDate || modalData?.planType !== "Monthly") return [];
-    
+
     const options = [];
     const start = new Date(startDate);
 
     for (let i = 1; i <= 12; i++) {
-        const end = new Date(start);
-        end.setMonth(start.getMonth() + i);
-        end.setDate(end.getDate() - 1); 
-        
-        const dateStr = end.toISOString().split('T')[0];
-        const label = end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-        
-        options.push({ 
-            value: dateStr, 
-            label: `${label} (${i} Month${i > 1 ? 's' : ''})` 
-        });
+      const end = new Date(start);
+      end.setMonth(start.getMonth() + i);
+      end.setDate(end.getDate() - 1);
+
+      const dateStr = end.toISOString().split("T")[0];
+      const label = end.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+
+      options.push({
+        value: dateStr,
+        label: `${label} (${i} Month${i > 1 ? "s" : ""})`,
+      });
     }
     return options;
   }, [startDate, modalData]);
@@ -640,8 +652,20 @@ const WorkspacePricing = () => {
           {groupedWorkspaces.map((group, idx) => (
             <motion.div
               key={`${group.title}-${idx}`}
-              whileHover={{ scale: 1.03 }}
-              transition={{ type: "spring", stiffness: 200 }}
+              // --- START ANIMATION CHANGES ---
+              initial={{ opacity: 0, y: 50 }} // Start invisible and slightly lower
+              whileInView={{ opacity: 1, y: 0 }} // Animate to visible and original position
+              viewport={{ once: true, amount: 0.2 }} // Trigger when 20% of element is in view, only once
+              transition={{
+                duration: 0.5,
+                delay: idx * 0.1, // Stagger effect: 0.1s delay per item
+                ease: "easeOut",
+              }}
+              whileHover={{
+                scale: 1.03,
+                transition: { duration: 0.2, delay: 0 }, // Reset delay for hover so it feels snappy
+              }}
+              // --- END ANIMATION CHANGES ---
               className="relative rounded-2xl overflow-hidden shadow-lg border border-gray-200"
             >
               <img
@@ -697,7 +721,6 @@ const WorkspacePricing = () => {
           ))}
         </div>
       )}
-
       {/* BookMyShow-style Space Code Selection Modal */}
       <AnimatePresence>
         {codeSelectModal && (
@@ -869,9 +892,7 @@ const WorkspacePricing = () => {
                   {modalData.planType.toLowerCase()} pack
                 </p>
 
-                <label className="block text-gray-700 mb-2">
-                  Start Date:
-                </label>
+                <label className="block text-gray-700 mb-2">Start Date:</label>
                 <input
                   type="date"
                   value={startDate}
@@ -884,7 +905,9 @@ const WorkspacePricing = () => {
                     // Check if selected day is Sunday
                     const day = new Date(dateStr).getUTCDay(); // getUTCDay() works best for date inputs (YYYY-MM-DD parses to UTC)
                     if (day === 0) {
-                      toast.error("Workspaces are closed on Sundays. Please select another date.");
+                      toast.error(
+                        "Workspaces are closed on Sundays. Please select another date."
+                      );
                       setStartDate(""); // Clear the invalid selection
                     } else {
                       setStartDate(dateStr);
@@ -1103,31 +1126,31 @@ const WorkspacePricing = () => {
                     <label className="block text-gray-700 mb-2">
                       End Date:
                     </label>
-                    
+
                     {modalData.planType === "Monthly" ? (
-                        <select
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                        >
-                            {monthlyEndOptions.map(opt => (
-                                <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                </option>
-                            ))}
-                        </select>
+                      <select
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                      >
+                        {monthlyEndOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
                     ) : (
-                        <input
-                          type="date"
-                          value={endDate}
-                          readOnly
-                          disabled
-                          className="w-full border border-gray-300 rounded-lg px-4 py-2 shadow-sm bg-gray-100 cursor-not-allowed text-gray-600"
-                        />
+                      <input
+                        type="date"
+                        value={endDate}
+                        readOnly
+                        disabled
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 shadow-sm bg-gray-100 cursor-not-allowed text-gray-600"
+                      />
                     )}
-                    
+
                     <p className="text-sm text-gray-500 mt-1">
-                      {modalData.planType === "Monthly" 
+                      {modalData.planType === "Monthly"
                         ? "Select duration (1 month, 2 months, etc.)"
                         : "End date is auto-calculated based on your selected plan."}
                     </p>
@@ -1603,7 +1626,10 @@ const WorkspacePricing = () => {
                                               }
                                             })
                                             .catch((err) => {
-                                              console.error("Email error:", err);
+                                              console.error(
+                                                "Email error:",
+                                                err
+                                              );
                                               toast.warn(
                                                 "Booking saved, but email sending failed."
                                               );

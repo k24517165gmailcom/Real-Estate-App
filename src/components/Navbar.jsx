@@ -104,7 +104,7 @@ const Navbar = () => {
     <div className="flex justify-end flex-1 items-center gap-4">
       <button
         onClick={() => navigate(user ? "/dashboard" : "/auth")}
-        className="hidden md:block bg-white text-black font-semibold px-6 py-3 rounded-full hover:bg-orange-500 hover:text-white transition-all duration-300"
+        className="hidden md:block bg-black text-white font-semibold px-6 py-3 rounded-full hover:text-white hover: bg-orange-500 transition-all duration-300"
       >
         {user ? "My Account" : "Sign up / Login"}
       </button>

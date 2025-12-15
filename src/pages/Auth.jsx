@@ -10,17 +10,15 @@ const Auth = () => {
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
+  // ✅ Define BASE_URL here so all functions can use it
+  const BASE_URL = import.meta.env.VITE_API_URL;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
 
-    const BASE_URL = import.meta.env.VITE_API_URL;
-
     const url = isLogin ? `${BASE_URL}/login.php` : `${BASE_URL}/signup.php`;
-
     const payload = { email, password, ...(isLogin ? {} : { name }) };
-
-    console.log("Submitting auth form:", payload);
 
     try {
       const response = await fetch(url, {
@@ -29,24 +27,13 @@ const Auth = () => {
         body: JSON.stringify(payload),
       });
 
-      console.log("Raw response:", response);
-
       const result = await response.json();
-      console.log("Parsed response:", result);
       setMessage(result.message);
 
       if (result.status === "success" && result.user) {
-        // ✅ Save JWT token
-        if (result.token) {
-          localStorage.setItem("token", result.token);
-          console.log("JWT token saved:", result.token);
-        }
-
+        if (result.token) localStorage.setItem("token", result.token);
         localStorage.setItem("user", JSON.stringify(result.user));
-        console.log("User info saved:", result.user);
-
         window.dispatchEvent(new Event("userUpdated"));
-
         setTimeout(() => navigate("/dashboard"), 800);
       }
     } catch (error) {
@@ -55,7 +42,7 @@ const Auth = () => {
     }
   };
 
-  // ✅ Example: Using token for a protected route
+  // ✅ Now BASE_URL is accessible here too
   const checkProtected = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -63,13 +50,10 @@ const Auth = () => {
       return;
     }
 
-    console.log("Using token for protected route:", token);
-
     try {
       const res = await fetch(`${BASE_URL}/protected.php`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       const data = await res.json();
       console.log("Protected route data:", data);
     } catch (err) {

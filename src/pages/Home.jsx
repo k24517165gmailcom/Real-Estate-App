@@ -9,6 +9,7 @@ import WorkspacePricing from "../components/WorkspacePricing";
 
 // IMPORT THE PROMO COMPONENT
 import CoworkingPromo from "../components/CoworkingPromo";
+import Amenities from "../components/Amenities";
 
 const Home = () => {
   const [showPopup, setShowPopup] = useState(false);
@@ -63,6 +64,7 @@ const Home = () => {
 
       {/* ---------- PAGE CONTENT ----------- */}
       <About />
+      <Amenities/>
       <WorkspacePricing />
       <Testimonials />
       {/*<Team /> */}
