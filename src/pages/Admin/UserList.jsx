@@ -3,9 +3,10 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import UserProfileModal from "./UserProfileModal";
 import UserComments from "./UserComments";
+import CompanyProfileModal from "./CompanyProfileModal";
 
-// ✅ API base from environment variable
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
+const API_BASE =
+  import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
@@ -13,6 +14,7 @@ const UserList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [viewUser, setViewUser] = useState(null); // 👈 added for View modal
   const [previewImage, setPreviewImage] = useState(null);
   const [selectedCommentUser, setSelectedCommentUser] = useState(null);
 
@@ -23,14 +25,12 @@ const UserList = () => {
     Closed: "text-green-600 bg-green-100",
   };
 
-  // ✅ Fetch users dynamically
   const fetchUsers = async () => {
     try {
       const response = await fetch(`${API_BASE}/get_users.php`);
       const data = await response.json();
       setUsers(data.users || []);
     } catch (error) {
-      console.error("Error fetching users:", error);
       toast.error("Failed to load users");
     }
   };
@@ -39,7 +39,6 @@ const UserList = () => {
     fetchUsers();
   }, []);
 
-  // Update user details dynamically
   const handleSaveUser = async (updatedData) => {
     try {
       const formData = new FormData();
@@ -50,10 +49,8 @@ const UserList = () => {
       formData.append("dob", updatedData.dob);
       formData.append("address", updatedData.address);
       formData.append("password", updatedData.password || "");
-
-      if (updatedData.profilePic) {
+      if (updatedData.profilePic)
         formData.append("profilePic", updatedData.profilePic);
-      }
 
       const response = await fetch(`${API_BASE}/update_user.php`, {
         method: "POST",
@@ -61,26 +58,21 @@ const UserList = () => {
       });
 
       const data = await response.json();
-
       if (data.success) {
         toast.success("User updated successfully!");
         fetchUsers();
         setSelectedUser(null);
-      } else {
-        toast.error(data.message || "Failed to update user.");
-      }
+      } else toast.error(data.message || "Failed to update user.");
     } catch (error) {
-      console.error("Error updating user:", error);
       toast.error("Something went wrong!");
     }
   };
 
-  // Filter + Pagination
   const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(search.toLowerCase()) ||
-      user.email.toLowerCase().includes(search.toLowerCase()) ||
-      user.phone.includes(search)
+    (u) =>
+      u.name.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase()) ||
+      u.phone.includes(search)
   );
 
   const indexOfLast = currentPage * entriesPerPage;
@@ -88,7 +80,6 @@ const UserList = () => {
   const currentUsers = filteredUsers.slice(indexOfFirst, indexOfLast);
   const totalPages = Math.ceil(filteredUsers.length / entriesPerPage);
 
-  // Render comments view if selected
   if (selectedCommentUser) {
     return (
       <UserComments
@@ -159,7 +150,9 @@ const UserList = () => {
                   key={user.id || index}
                   className="text-center hover:bg-orange-50 transition"
                 >
-                  <td className="py-2 px-4 border">{indexOfFirst + index + 1}</td>
+                  <td className="py-2 px-4 border">
+                    {indexOfFirst + index + 1}
+                  </td>
 
                   <td className="py-2 px-4 border">
                     {user.profile_pic ? (
@@ -209,7 +202,10 @@ const UserList = () => {
                   </td>
 
                   <td className="py-2 px-4 border">
-                    <button className="text-orange-500 border border-orange-500 px-3 py-1 rounded hover:bg-orange-50">
+                    <button
+                      className="text-orange-500 border border-orange-500 px-3 py-1 rounded hover:bg-orange-50"
+                      onClick={() => setViewUser(user)} // 👈 open view modal
+                    >
                       View
                     </button>
                   </td>
@@ -229,12 +225,13 @@ const UserList = () => {
       {/* Pagination */}
       <div className="flex flex-col md:flex-row justify-between items-center mt-4 text-sm text-gray-600 gap-2">
         <p>
-          Showing {indexOfFirst + 1} to {Math.min(indexOfLast, filteredUsers.length)} of{" "}
+          Showing {indexOfFirst + 1} to{" "}
+          {Math.min(indexOfLast, filteredUsers.length)} of{" "}
           {filteredUsers.length} entries
         </p>
         <div className="flex gap-1">
           <button
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
             disabled={currentPage === 1}
             className="px-3 py-1 border rounded disabled:opacity-50"
           >
@@ -252,7 +249,7 @@ const UserList = () => {
             </button>
           ))}
           <button
-            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
             disabled={currentPage === totalPages}
             className="px-3 py-1 border rounded disabled:opacity-50"
           >
@@ -261,7 +258,7 @@ const UserList = () => {
         </div>
       </div>
 
-      {/* User Profile Modal */}
+      {/* Modals */}
       {selectedUser && (
         <UserProfileModal
           user={selectedUser}
@@ -270,7 +267,13 @@ const UserList = () => {
         />
       )}
 
-      {/* Image Preview Modal */}
+      {viewUser && (
+        <CompanyProfileModal
+          userId={viewUser.id} // pass only user ID
+          onClose={() => setViewUser(null)}
+        />
+      )}
+
       {previewImage && (
         <div
           className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
