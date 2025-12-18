@@ -77,6 +77,7 @@ import AdminBlueprintView from "./pages/Admin/AdminBlueprintView";
 import ContactComments from "./pages/Admin/ContactComments";
 import Amenities from "./components/Amenities";
 import EditContact from "./pages/Admin/EditContact";
+import AdminVisitorsOverview from "./pages/Admin/AdminVisitorsOverview";
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -259,6 +260,17 @@ const App = () => {
               <ProtectedRouteAdmin>
                 <AdminLayout>
                   <AdminVisitors />
+                </AdminLayout>
+              </ProtectedRouteAdmin>
+            }
+          />
+
+          <Route
+            path="/admin/visitorsoverview"
+            element={
+              <ProtectedRouteAdmin>
+                <AdminLayout>
+                  <AdminVisitorsOverview />
                 </AdminLayout>
               </ProtectedRouteAdmin>
             }
