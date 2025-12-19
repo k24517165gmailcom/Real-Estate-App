@@ -1,19 +1,37 @@
 import React, { useEffect, useState } from "react";
+import { X, Plus } from "lucide-react"; 
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost/vayuhu_backend";
+
+// Placeholder: In a real app, get this from your Auth Context or LocalStorage
+const CURRENT_ADMIN_ID = 3;
 
 const AdminVisitorsOverview = () => {
   const [visitors, setVisitors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Form State
+  const initialFormState = {
+    name: "",
+    contact: "",
+    email: "",
+    company_name: "",
+    visiting_date: "",
+    visiting_time: "",
+    reason: "",
+  };
+  const [formData, setFormData] = useState(initialFormState);
 
   // -----------------------------
   // Fetch Visitors
   // -----------------------------
   const fetchVisitors = async () => {
-    setMessage("");
-    setLoading(true);
+    if(visitors.length === 0) setLoading(true);
 
     try {
       const res = await fetch(`${API_URL}/get_all_visitors.php`);
@@ -24,7 +42,6 @@ const AdminVisitorsOverview = () => {
         setLoading(false);
         return;
       }
-
       setVisitors(data.visitors);
     } catch (err) {
       console.error("Error fetching visitors:", err);
@@ -39,72 +56,95 @@ const AdminVisitorsOverview = () => {
   }, []);
 
   // -----------------------------
+  // Form Handlers
+  // -----------------------------
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setMessage("");
+
+    try {
+      const payload = {
+        ...formData,
+        admin_id: CURRENT_ADMIN_ID, 
+        user_id: null 
+      };
+
+      // CHANGE IS HERE: Updated filename to admin_add_visitor.php
+      const res = await fetch(`${API_URL}/admin_add_visitor.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await res.json();
+
+      if (result.success) {
+        setIsModalOpen(false);
+        setFormData(initialFormState);
+        fetchVisitors(); 
+        setMessage("Visitor added successfully!");
+        setTimeout(() => setMessage(""), 3000);
+      } else {
+        alert(result.message);
+      }
+    } catch (error) {
+      console.error("Error adding visitor:", error);
+      alert("Failed to connect to server.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  // -----------------------------
   // Render Helpers
   // -----------------------------
   const totalVisitors = visitors.length;
-
-  // Aggregate visitors per user
-  const userMap = {};
-  visitors.forEach((v) => {
-    if (!userMap[v.user_id]) {
-      userMap[v.user_id] = {
-        userId: v.user_id,
-        userName: v.user_name || "Unknown User",
-        companyName: v.company_name || "—",
-        totalVisitors: 0,
-      };
-    }
-    userMap[v.user_id].totalVisitors += 1;
-  });
-
-  const userStats = Object.values(userMap);
-
-  const totalUsers = userStats.length;
-  const avgVisitorsPerUser = totalUsers ? (totalVisitors / totalUsers).toFixed(1) : 0;
-
-  // Format date/time
+  
+  // Simple unique user count
+  const uniqueUsers = new Set(visitors.map(v => v.user_id).filter(id => id !== null)).size;
+  
   const formatDate = (dateStr) => (dateStr ? new Date(dateStr).toLocaleDateString() : "-");
   const formatTime = (timeStr) => (timeStr ? timeStr.slice(0, 5) : "-");
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-orange-600">
-          Admin Visitors Overview
-        </h1>
-        <p className="text-sm text-gray-500">
-          Overview of users and their visitors
-        </p>
+    <div className="p-6 bg-gray-50 min-h-screen relative">
+      
+      {/* Header & Add Button */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-orange-600">Admin Visitors Overview</h1>
+          <p className="text-sm text-gray-500">Manage all visitor entries</p>
+        </div>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition shadow-sm"
+        >
+          <Plus size={18} />
+          Add Visitor
+        </button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white shadow-sm border border-orange-100 rounded-2xl p-4 flex flex-col justify-center hover:shadow-md transition">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        <div className="bg-white shadow-sm border border-orange-100 rounded-2xl p-4 flex flex-col justify-center">
           <h2 className="text-sm text-gray-500">Total Visitors</h2>
           <p className="text-2xl font-bold text-orange-600">{totalVisitors}</p>
         </div>
-        <div className="bg-white shadow-sm border border-green-100 rounded-2xl p-4 flex flex-col justify-center hover:shadow-md transition">
-          <h2 className="text-sm text-gray-500">Total Users Who Added Visitors</h2>
-          <p className="text-2xl font-bold text-green-600">{totalUsers}</p>
-        </div>
-        <div className="bg-white shadow-sm border border-blue-100 rounded-2xl p-4 flex flex-col justify-center hover:shadow-md transition">
-          <h2 className="text-sm text-gray-500">Average Visitors per User</h2>
-          <p className="text-2xl font-bold text-blue-600">{avgVisitorsPerUser}</p>
+        <div className="bg-white shadow-sm border border-green-100 rounded-2xl p-4 flex flex-col justify-center">
+          <h2 className="text-sm text-gray-500">Unique Users (Staff)</h2>
+          <p className="text-2xl font-bold text-green-600">{uniqueUsers}</p>
         </div>
       </div>
 
-      {/* Message */}
+      {/* Status Message */}
       {message && (
-        <p
-          className={`text-sm mt-3 text-center ${
-            message.toLowerCase().includes("success")
-              ? "text-green-600"
-              : "text-red-500"
-          }`}
-        >
+        <div className={`mb-4 p-3 rounded-lg text-sm text-center ${message.includes("success") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
           {message}
-        </p>
+        </div>
       )}
 
       {/* Visitors Table */}
@@ -118,36 +158,26 @@ const AdminVisitorsOverview = () => {
             <table className="w-full text-sm text-left border-collapse">
               <thead className="bg-orange-50 text-gray-700 uppercase text-xs sticky top-0 z-10">
                 <tr>
-                  {[
-                    "S.No",
-                    "Visitor Name",
-                    "Contact No",
-                    "Email",
-                    "Company Name",
-                    "Visiting Date",
-                    "Visiting Time",
-                    "Reason",
-                    "Added By",
-                  ].map((col) => (
-                    <th key={col} className="p-2 border">{col}</th>
+                  {["S.No", "Visitor Name", "Contact", "Email", "Company", "Date", "Time", "Reason", "Added By"].map((col) => (
+                    <th key={col} className="p-3 border-b border-orange-100 font-semibold">{col}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {visitors.map((v, i) => (
-                  <tr
-                    key={v.id}
-                    className="hover:bg-orange-50 transition duration-150"
-                  >
-                    <td className="p-2 border">{i + 1}</td>
-                    <td className="p-2 border">{v.name}</td>
-                    <td className="p-2 border">{v.contact}</td>
-                    <td className="p-2 border">{v.email || "-"}</td>
-                    <td className="p-2 border">{v.company_name || "-"}</td>
-                    <td className="p-2 border">{formatDate(v.visiting_date)}</td>
-                    <td className="p-2 border">{formatTime(v.visiting_time)}</td>
-                    <td className="p-2 border">{v.reason || "-"}</td>
-                    <td className="p-2 border">{v.user_name}</td>
+                  <tr key={v.id} className="hover:bg-orange-50 transition duration-150 border-b border-gray-100">
+                    <td className="p-3">{i + 1}</td>
+                    <td className="p-3 font-medium text-gray-800">{v.name}</td>
+                    <td className="p-3 text-gray-600">{v.contact}</td>
+                    <td className="p-3 text-gray-500">{v.email || "-"}</td>
+                    <td className="p-3 text-gray-500">{v.company_name || "-"}</td>
+                    <td className="p-3 text-gray-500">{formatDate(v.visiting_date)}</td>
+                    <td className="p-3 text-gray-500">{formatTime(v.visiting_time)}</td>
+                    <td className="p-3 text-gray-500">{v.reason || "-"}</td>
+                    {/* If user_name is null, it means it was likely added by Admin */}
+                    <td className="p-3 text-orange-600 font-medium">
+                      {v.user_name ? v.user_name : <span className="text-purple-600 font-bold">Admin</span>}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -155,6 +185,66 @@ const AdminVisitorsOverview = () => {
           </div>
         )}
       </div>
+
+      {/* --- POPUP MODAL --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-orange-50">
+              <h3 className="text-lg font-semibold text-gray-800">Add New Visitor (Admin)</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-red-500 transition">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
+                  <input type="text" name="name" required value={formData.name} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Contact No *</label>
+                  <input type="text" name="contact" required value={formData.contact} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" name="email" value={formData.email} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Company Name</label>
+                <input type="text" name="company_name" value={formData.company_name} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Date</label>
+                  <input type="date" name="visiting_date" value={formData.visiting_date} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Time</label>
+                  <input type="time" name="visiting_time" value={formData.visiting_time} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Reason</label>
+                <textarea name="reason" rows="2" value={formData.reason} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm resize-none"></textarea>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-3">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition">Cancel</button>
+                <button type="submit" disabled={submitting} className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition disabled:opacity-50">
+                  {submitting ? "Saving..." : "Save Visitor"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
